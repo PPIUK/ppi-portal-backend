@@ -1,0 +1,3 @@
+C:\Users\ASUS\source\repos\DatabasePPIUK\DatabasePPIUK\obj\Debug\DatabasePPIUK.njsprojAssemblyReference.cache
+C:\Users\ASUS\source\repos\DatabasePPIUK\DatabasePPIUK\obj\Debug\DatabasePPIUK.njsproj.CoreCompileInputs.cache
+C:\Users\ASUS\source\repos\DatabasePPIUK\DatabasePPIUK\bin\Microsoft.NodejsTools.WebRole.dll
