@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+//Schema for the verification email token
 const tokenSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
