@@ -154,6 +154,49 @@ If at any time when accessing the endpoints 401 is returned with the body below:
        "refresh_token": new refresh token value
    }
    ```
+
+8. POST `/auth/forgot`. Sends an email with a token for resetting password.  
+Request body:
+    ```
+    {
+        "email": email address value
+    }
+    ```
+   The token will be sent to the university email address, regardless of what is included in body.
+   
+   Possible responses:
+   - 404: profile with the email not found.
+   - 201: Email with token sent.
+   
+   Response body: 
+   ```
+   { "message": message value }
+    ```
+   
+9. GET `/auth/reset-password/:token`. Checks if the token is valid.
+If it is, a reset password form should be shown to user.
+Possible responses:
+    - 404: Token not valid or profile not found.
+    - 200: Token is valid, should redirect to password reset form.
+    
+10. POST `/auth/reset-password/:token`. Resets the password.
+Request body:
+    ```
+    {
+        "email": email value,
+        "password": new password value
+    }
+    ```
+    Possible responses:
+    - 400: password or token not included.
+    - 404: token not valid or profile not found.
+    - 401: token doesn't match email
+    - 200: Password reset successful.
+    
+    Response body:
+    ```
+       { "message": message value }
+    ```
 -------------------------------
 This PPI UK Database Backend have a few main functions:
 
