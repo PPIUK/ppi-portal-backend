@@ -13,7 +13,7 @@ Handle it as you wish.
 Email can be either university email or personal email.  
 Request body: 
     ```
-    {"email": "email value"} 
+    {"email": email value} 
     ```  
    Possible responses:
     - 404: Account not found. Call POST `/auth/register/new` or redirect to `/census`
@@ -32,8 +32,8 @@ Request body:
     Response body: 
     ```
     {
-        "message": "message value", 
-        "email": "email value" #not for 404, this is university email, not personal email
+        "message": message value, 
+        "email": email value #not for 404, this is university email, not personal email
     }
    ```
    
@@ -43,8 +43,8 @@ User will need to check their email for verification email.
 Request body:
    ```
    {
-        "email": "university email value",
-        "password": "new password value"
+        "email": university email value,
+        "password": new password value
    }
    ```
    Possible responses:
@@ -56,14 +56,14 @@ Request body:
 
     Response body: 
     ```
-    { "message": "message value" }
+    { "message": message value }
    ```
 
 3. POST `/auth/resend-verification`. Asks to resend a verification email.  
 Request body:
    ```
    {
-        "email": "university email value"
+        "email": university email value
    }
    ```
    Possible responses:  
@@ -75,17 +75,17 @@ Request body:
    
    Response body: 
    ```
-   { "message": "message value" }
+   { "message": message value }
     ```
 
 4. GET `/auth/verify-email/:token`. Verifies the email. 
 emailVerified field changes to true.  
 Request param: token.  
 Possible responses:
-- 400: Token is not provided as param. Or, account had been verified previously, ask user to log in. Check message.
-- 404: Valid token is not found. Token may be expired. May offer user to resend verification email by calling POST `/auth/resend-verification`.
-Or, profile for that token is not found.
-- 200: Email verification success. Ask user to login.
+    - 400: Token is not provided as param. Or, account had been verified previously, ask user to log in. Check message.
+    - 404: Valid token is not found. Token may be expired. May offer user to resend verification email by calling POST `/auth/resend-verification`.
+    Or, profile for that token is not found.
+    - 200: Email verification success. Ask user to login.
 
 5. POST `/auth/login`.  
 username value should be autofilled with the university email value received from `/auth/account-lookup.`,
@@ -93,8 +93,8 @@ although personal email should also work in this case.
 Request body:
    ```
    {
-        "username": "university email value",
-        "password": "new password value",
+        "username": university email value,
+        "password": new password value,
         "client_id": "api",
         "grant_type": "password" #value must be the string 'password'
    }
@@ -108,12 +108,52 @@ Request body:
    Response body: 
    ```
    {
-       "access_token": "access token value", 
+       "access_token": access token value, 
        "token_type": "Bearer",
-       "expires_in": 3599 #currently access token only valid for 1 hour. 
+       "expires_in": 3599, #currently access token only valid for 1 hour.
+       "refresh_token": refresh token value 
    }
     ```
    
+6. POST `/auth/logout`. Deletes the access token.
+No request body needed, however access token needs to be included in header 
+(Authorization: Bearer **token**)  
+Possible responses:
+    - 200: Logged out.
+    - 401: Unauthorized, access token not valid
+
+7. POST `/auth/token`. Gets new access token.  
+If at any time when accessing the endpoints 401 is returned with the body below:
+    ```
+    {
+        "error": "invalid_token",
+        "error_description": "Invalid token: access token has expired"
+    }
+    ```
+   ,you can call this `/auth/token` endpoint to get a new access token.
+   
+   Request body:
+   ```
+   {
+        "client_id": "api",
+        "grant_type": "refresh_token" #value must be the string 'refresh_token',
+        "refresh_token": refresh token value that you get before
+   }
+   ```
+   
+   Possible responses:
+   - 200: New access token is returned.
+   - 400: Bad request. Refresh token is invalid
+   
+   Response body:
+   ```
+   {
+       "access_token": new access token value,
+       "token_type": "Bearer",
+       "expires_in": 3599,
+       "refresh_token": new refresh token value
+   }
+   ```
 -------------------------------
 This PPI UK Database Backend have a few main functions:
 

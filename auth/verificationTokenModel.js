@@ -22,4 +22,4 @@ const tokenSchema = new mongoose.Schema({
 
 }, {timestamps: true});
 
-module.exports = mongoose.model('Tokens', tokenSchema);
+module.exports = mongoose.model('VerificationTokens', tokenSchema);

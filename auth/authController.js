@@ -1,5 +1,7 @@
 Profile = require('../profileModel');
-Token = require('./tokenModel');
+Token = require('./verificationTokenModel');
+AccessToken = require('./accessTokenModel');
+RefreshToken = require('./refreshTokenModel')
 
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
@@ -66,6 +68,23 @@ exports.login = function (req, res, cbFunc) {
         }
         cbFunc();
     });
+}
+
+/*
+    POST /auth/logout. Deletes the access token.
+ */
+exports.logout = function (req, res) {
+    AccessToken.findOneAndDelete({accessToken: res.locals.oauth.token.accessToken}, function(err, result) {
+        if (err) {
+            return res.status(500).json({
+                message: err.message,
+            });
+        }
+        return res.status(200).json({
+            message: "Logged out"
+        })
+    })
+
 }
 
 exports.register = function (req, res) {
@@ -250,9 +269,6 @@ exports.verifyEmail = function (req, res) {
 }
 
 //TODO: Add Password reset
-
-
-//TODO: add resend verification token
 
 async function sendVerificationEmail(profile, req, res) {
     try {
