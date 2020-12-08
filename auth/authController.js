@@ -3,6 +3,8 @@ Token = require('./verificationTokenModel');
 AccessToken = require('./accessTokenModel');
 RefreshToken = require('./refreshTokenModel')
 
+const nodemailer = require("nodemailer");
+
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
  */
@@ -271,20 +273,47 @@ exports.verifyEmail = function (req, res) {
 //TODO: Add Password reset
 
 async function sendVerificationEmail(profile, req, res) {
-    try {
-        const token = profile.generateVerificationToken();
+    const token = profile.generateVerificationToken();
 
-        await token.save();
-        //TODO: add email stuffs here
+    // TODO: this is using an example account, change!
+    let transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            //test email
+            user: 'alaina.schamberger3@ethereal.email', // generated ethereal user
+            pass: 'wMnrkdG1gV1VMPqN88', // generated ethereal password
+        },
+    });
 
-        let link = "/api/auth/verify/" + token.token;
+    token.save(function(err) {
+        if (err) {
+            return res.status(500).json({
+                message: err.message
+            })
+        }
+        let baseUri = "localhost:3000" //TODO: change for production
+        let link = baseUri+"/api/auth/verify-email/" + token.token;
 
-        return res.status(201).json({
-            message: "Account registered. A verification email has been sent to " + profile.email + "."
-        })
-    } catch (err) {
-        return res.status(500).json({
-            message: err.message
-        })
-    }
+        // TODO: modify as needed, add templating?
+        let message = {
+            from: '"Fred Foo 👻" <foo@example.com>', // sender address
+            to: profile.email, // list of receivers
+            subject: "Verify your email", // Subject line
+            text: link, // plain text body
+            html: "<a href="+link+">Click here</a>", // html body
+        }
+
+        transporter.sendMail(message, (err, info) => {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message
+                })
+            }
+            return res.status(201).json({
+                message: "Account registered. A verification email has been sent to " + profile.email + "."
+            })
+        });
+    });
 }
