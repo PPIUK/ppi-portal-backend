@@ -4,6 +4,33 @@ AccessToken = require('./accessTokenModel');
 RefreshToken = require('./refreshTokenModel')
 
 const nodemailer = require("nodemailer");
+/*
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
+const googleClientId = "645266057885-8jonvmv73i4lo0r415spdhfd1d7fgm9g.apps.googleusercontent.com";
+const googleClientSecret = "0pWNHcQj5DLFfa2s4xMdkJpe";
+const googleRefreshToken = "1//04Ego7vgYu_rnCgYIARAAGAQSNwF-L9Ir2pj-mncUGFklRwbjkkXUiKvWjwGcI-2dH0N68OEthv4QdKMV6SytARHmEnd8ouQIhJk";
+
+const googleOAuth2Client = new OAuth2(googleClientId,
+    googleClientSecret, "https://developers.google.com/oauthplayground");
+
+googleOAuth2Client.setCredentials({
+    refresh_token: googleRefreshToken
+})
+
+let googleAccessToken = googleOAuth2Client.getAccessToken();
+
+let transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        type: "OAuth2",
+        user: "", //your gmail account you used to set the project up in google cloud console"
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        refreshToken: googleRefreshToken,
+        accessToken: googleAccessToken //access token variable we defined earlier
+    }});
+*/
 // TODO: this is using an example account, change!
 let transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',
@@ -319,7 +346,7 @@ exports.forgotPassword = function (req, res) {
                 to: profile.email, // list of receivers
                 subject: "Reset your password", // Subject line
                 text: link, // plain text body
-                html: "<a href="+link+">Click here</a>", // html body
+                html: link, // html body
             }
 
             transporter.sendMail(message, (err, info) => {
