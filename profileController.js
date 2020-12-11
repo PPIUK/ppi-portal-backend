@@ -312,7 +312,7 @@ exports.verify = function(req, res) {
             });
         }
 
-        Profile.findByIdAndUpdate(req.params.profile_id, {manuallyVerified: true}, function (err, profile) {
+        Profile.findByIdAndUpdate(req.params.profile_id, {manuallyVerified: true, role: 'verified'},  function (err, profile) {
             if (err) {
                 return res.status(500).json({
                     message: err.message
