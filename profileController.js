@@ -9,7 +9,7 @@ const publicInfo = ['fullName', 'university', 'degreeLevel', 'course', 'branch']
 /*
     GET/READ info of all users. Depending on the requester's role/privileges, the behaviour is different:
     - Verified users can see public info of all users.
-    - Verifier users can see public info of all users + manuallyVerified field of users in the requester's branch
+    - Verifier users can see public info of all users + role field of users in the requester's branch
     - DataAccess users can see public info of all users + private info of users in the requester's branch
  */
 exports.index = function (req, res) {
@@ -312,7 +312,7 @@ exports.verify = function(req, res) {
             });
         }
 
-        Profile.findByIdAndUpdate(req.params.profile_id, {manuallyVerified: true, role: 'verified'},  function (err, profile) {
+        Profile.findByIdAndUpdate(req.params.profile_id, {role: 'verified'},  function (err, profile) {
             if (err) {
                 return res.status(500).json({
                     message: err.message

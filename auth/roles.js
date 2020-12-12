@@ -11,15 +11,15 @@ const grants = {
         profile: {
             'read:own': ['*', '!_id', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
-            'read:any': ['fullName', 'university', 'degreeLevel', 'course', 'branch']
+            'read:any': ['fullName', 'university', 'degreeLevel', 'faculty', 'course', 'branch']
         }
     },
     verifier: {
         profile: {
             'read:own': ['*', '!_id', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
-            'read:any': ['fullName', 'university', 'degreeLevel', 'course', 'branch', 'manuallyVerified'],
-            'update:any': ['manuallyVerified']
+            'read:any': ['fullName', 'university', 'degreeLevel', 'faculty', 'course', 'branch', 'role'],
+            'update:any': ['role']
         }
     },
     dataAccess: {

@@ -87,10 +87,6 @@ var profileSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    manuallyVerified: {
-        type: Boolean,
-        default: false
-    },
     accessToken: {
         type: String,
         required: false
