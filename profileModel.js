@@ -3,7 +3,7 @@ const aggregatePaginate = require('mongoose-aggregate-paginate-v2');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const Token = require('./auth/tokenModel');
+const Token = require('./auth/verificationTokenModel');
 
 var profileSchema = new mongoose.Schema({
     branch: {

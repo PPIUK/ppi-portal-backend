@@ -52,6 +52,12 @@ module.exports = (app) => {
     router.route('/auth/resend-verification').post(authController.resendVerificationEmail);
     router.route('/auth/verify-email/:token').get(authController.verifyEmail);
     router.route('/auth/login').post(authController.login, app.oauth.token());
+    router.route('/auth/logout').post(app.oauth.authenticate(), authController.logout);
+    router.route('/auth/account-lookup').post(authController.accountLookup);
+    router.route('/auth/token').post(app.oauth.token());
+    router.route('/auth/forgot').post(authController.forgotPassword);
+    router.route('/auth/reset-password/:token').get(authController.allowResetPassword)
+                                                     .post(authController.resetPassword);
 
     // Export API routes
     return router;

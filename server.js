@@ -34,7 +34,8 @@ else
 
 app.oauth = new oAuthServer({
     model: oAuthService,
-    requireClientAuthentication: {password: false},
+    requireClientAuthentication: {refresh_token: false, password: false},
+    refreshTokenLifetime: 86400,
     continueMiddleware: true,
     debug: true
 })
