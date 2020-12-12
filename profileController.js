@@ -4,13 +4,28 @@ const ac = require('./auth/roles');
 // Profile.createIndexes();
 
 const baseUri = 'http://localhost:3000/api';
-const publicInfo = ['fullName', 'university', 'degreeLevel', 'course', 'branch'];
+const publicInfo = ['fullName', 'university', 'degreeLevel', 'faculty', 'course', 'branch'];
 
-/*
-    GET/READ info of all users. Depending on the requester's role/privileges, the behaviour is different:
-    - Verified users can see public info of all users.
-    - Verifier users can see public info of all users + role field of users in the requester's branch
-    - DataAccess users can see public info of all users + private info of users in the requester's branch
+/**
+ * Gets info of all users. Depending on the requester's role/privileges, the behaviour is different:
+     - Verified users can see public info of all users.
+     - Verifier users can see public info of all users + role field of users in the requester's branch
+     - DataAccess users can see public info of all users + private info of users in the requester's branch
+ * @name GET_/api/profiles
+ * @param req.query.full_name filter by name
+ * @param req.query.branch filter by branch
+ * @param req.query.branch filter by branch
+ * @param req.query.university filter by university
+ * @param req.query.course filter by course
+ * @param req.query.faculty filter by faculty
+ * @param req.query.degree_level filter by degree level
+ * @param req.query.sort field:asc/desc
+ * @param req.query.page current page
+ * @param req.query.limit number of documents per page
+ * @return res.statusCode 200 if successful
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data profiles
  */
 exports.index = function (req, res) {
     let aggregate_options = getDefaultAggregateOptions(req);
@@ -48,8 +63,23 @@ exports.index = function (req, res) {
     });
 };
 
-/*
-    GET/READ public info of all users, regardless of branch.
+/**
+ * Gets public info ('fullName', 'university', 'degreeLevel', 'faculty', 'course', 'branch') of all users, regardless of branch.
+ * @name GET_/api/profiles/public
+ * @param req.query.full_name filter by name
+ * @param req.query.branch filter by branch
+ * @param req.query.branch filter by branch
+ * @param req.query.university filter by university
+ * @param req.query.course filter by course
+ * @param req.query.faculty filter by faculty
+ * @param req.query.degree_level filter by degree level
+ * @param req.query.sort field:asc/desc
+ * @param req.query.page current page
+ * @param req.query.limit number of documents per page
+ * @return res.statusCode 200 if successful
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data public info of profiles
  */
 exports.indexPublic = function (req, res) {
     let aggregate_options = getDefaultAggregateOptions(req);
@@ -82,10 +112,19 @@ exports.indexPublic = function (req, res) {
     });
 }
 
-/*
-    POST/CREATE new profile.
-    Only dataAccess role user is allowed to perform this operation,
-    and they can only create a new profile for their own branch.
+/**
+ * Creates new profile.
+ * Only dataAccess role user is allowed to perform this operation,
+ * and they can only create a new profile for their own branch.
+ * @name POST_/api/profiles
+ * @param req.body all required fields of a profile
+ * @return res.statusCode 201 if successful
+ * @return res.statusCode 403 if caller doesn't have privilege
+ * @return res.statusCode 409 if user already exists
+ * @return res.statusCode 400 if not all fields are filled, or other errors
+ * @return res.location location of the newly created resource/profile
+ * @return res.body.message
+ * @return res.body.data profile that was created
  */
 exports.new = function (req, res) {
     if (req.body.branch !== res.locals.oauth.token.user.branch) {
@@ -123,9 +162,17 @@ exports.new = function (req, res) {
     });
 };
 
-/*
-    GET/READ private info of a user if they're in the same branch.
-    Otherwise, only the public info is returned.
+
+/**
+ * Gets private info of a user if the requester have dataAccess role and is in the same branch as the requested user.
+ * Otherwise, only the public info is returned.
+ * @name GET_/api/profiles/:profile_id
+ * @param req.params.profile_id id of the requested profile
+ * @return res.statusCode 200 if profile retrieved successfully
+ * @return res.statusCode 404 if profile with the id is not found
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data requested profile
  */
 exports.view = function (req, res) {
     Profile.findById(req.params.profile_id, {_id: 0, __v: 0}, function (err, profile) {
@@ -153,8 +200,15 @@ exports.view = function (req, res) {
     });
 };
 
-/*
-    GET/READ only public info of a user, regardless of branch
+/**
+ * Gets only public info of a user, regardless of branch.
+ * @name GET_/api/profiles/:profile_id/public
+ * @param req.params.profile_id id of the requested profile
+ * @return res.statusCode 200 if public profile retrieved successfully
+ * @return res.statusCode 404 if profile with the id is not found
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data public info of the profile
  */
 exports.viewPublic = function (req, res) {
     Profile.findById(req.params.profile_id, function (err, profile) {
@@ -175,8 +229,17 @@ exports.viewPublic = function (req, res) {
     });
 };
 
-/*
-    PATCH/UPDATE info of user. Can only be done by dataAccess role for user in their own branch.
+/**
+ * Updates info a user. Can only be done by dataAccess role for user in their own branch.
+ * @name PATCH_/api/profiles/:profile_id
+ * @param req.params.profile_id id of the to-be-updated profile
+ * @param req.body profile fields to update and their values
+ * @return res.statusCode 200 if profile is updated successfully
+ * @return res.statusCode 403 if user tries to update password or profile in other branch
+ * @return res.statusCode 404 if profile not found
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data the newly updated profile
  */
 exports.update = function (req, res) {
     if(req.body.password) {
@@ -216,8 +279,15 @@ exports.update = function (req, res) {
     });
 };
 
-/*
-    DELETE a user. Can only be done by dataAccess role for user in their own branch.
+/**
+ * Deletes a profile. Can only be done by dataAccess role for user in their own branch.
+ * @name DELETE_/api/profiles/:profile_id
+ * @param req.params.profile_id id of the to-be-deleted profile
+ * @return res.statusCode 200 if the profile is deleted successfully
+ * @return res.statusCode 404 if profile not found
+ * @return res.statusCode 403 if requester doesn't have enough privilege (not dataAccess user or trying to delete user outside of their branch)
+ * @return res.statusCode 500 if error
+ * @return res.body.message
  */
 exports.delete = function (req, res) {
     Profile.findById(req.params.profile_id, function(err, profile) {
@@ -250,8 +320,13 @@ exports.delete = function (req, res) {
     });
 };
 
-/*
-    GET/READ own profile info
+/**
+ * Gets own profile info. Can also be called by basic role.
+ * @name GET_/api/profiles/me
+ * @return res.status 200 if own profile retrieved successfully
+ * @return res.status 500 if error
+ * @return res.body.message
+ * @return res.body.data own profile details (not including password)
  */
 exports.viewSelf = function(req, res) {
     Profile.findById(res.locals.oauth.token.user, {password: 0}, function(err, profile) {
@@ -267,8 +342,15 @@ exports.viewSelf = function(req, res) {
     });
 }
 
-/*
-    PATCH/UPDATE own profile info
+/**
+ * Updates own profile info. Can also be called by basic role.
+ * @name PATCH_/api/profiles/me
+ * @param req.body profile fields to be updated
+ * @return res.statusCode 200 if profile updated successfully
+ * @return res.statusCode 400 if password is tried to be updated
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data the newly updated profile
  */
 exports.updateSelf = function(req, res) {
     if(req.body.password) {
@@ -291,8 +373,16 @@ exports.updateSelf = function(req, res) {
     });
 }
 
-/*
-    Manually verify user
+/**
+ * Manually verify user (i.e. change role of user to 'verified').
+ * Can only be done by verifier and dataAccess roles.
+ * @name PATCH_/api/profiles/:profile_id/verify
+ * @param req.params.profile_id id of the to-be-verified profile
+ * @return res.statusCode 200 if profile verified successfully
+ * @return res.statusCode 404 if profile not found
+ * @return res.statusCode 403 if requester doesn't have privilege
+ * @return res.statusCode 500 if error
+ * @return res.body.message
  */
 exports.verify = function(req, res) {
     Profile.findById(req.params.profile_id, function(err, profile) {
@@ -325,6 +415,10 @@ exports.verify = function(req, res) {
     });
 };
 
+/**
+ * Find permission for the requested action and role
+ * @param action
+ */
 exports.grantAccess = function (action) {
     return async (req, res, next) => {
         const permission = ac.can(res.locals.oauth.token.user.role)[action]('profile');
@@ -338,6 +432,9 @@ exports.grantAccess = function (action) {
     }
 }
 
+/**
+ * Aggregate options, such as filtering and sorting
+ */
 function getDefaultAggregateOptions (req) {
     let aggregate_options = [];
 
@@ -355,6 +452,9 @@ function getDefaultAggregateOptions (req) {
     if (req.query.course) {
         match.course = {$regex: req.query.course, $options: 'i'};
     }
+    if (req.query.faculty) {
+        match.faculty = {$regex: req.query.faculty, $options: 'i'};
+    }
     if (req.query.degree_level) {
         match.degreeLevel = {$regex: req.query.degree_level, $options: 'i'};
     }
@@ -368,15 +468,26 @@ function getDefaultAggregateOptions (req) {
             var splitted = e.split(':');
             sortQueryMap[splitted[0]] = splitted[1];
         });
-        aggregate_options.push({
-            $sort: {
-                "fullName": sortQueryMap["full_name"] === 'desc' ? -1 : 1,
-                "branch": sortQueryMap["branch"] === 'desc' ? -1 : 1,
-                "university": sortQueryMap["university"] === 'desc' ? -1 : 1,
-                "course": sortQueryMap["course"] === 'desc' ? -1 : 1,
-                "degreeLevel": sortQueryMap["degree_level"] === 'desc' ? -1 : 1,
-            }
-        })
+        let sort = {}
+        if(sortQueryMap["full_name"]) {
+            sort.fullName = sortQueryMap["full_name"] === 'desc' ? -1 : 1;
+        }
+        if(sortQueryMap["branch"]) {
+            sort.branch = sortQueryMap["branch"] === 'desc' ? -1 : 1;
+        }
+        if(sortQueryMap["university"]) {
+            sort.university = sortQueryMap["university"] === 'desc' ? -1 : 1;
+        }
+        if(sortQueryMap["faculty"]) {
+            sort.faculty = sortQueryMap["faculty"] === 'desc' ? -1 : 1;
+        }
+        if(sortQueryMap["course"]) {
+            sort.course = sortQueryMap["course"] === 'desc' ? -1 : 1;
+        }
+        if(sortQueryMap["degree_level"]) {
+            sort.degreeLevel = sortQueryMap["degreeLevel"] === 'desc' ? -1 : 1;
+        }
+        aggregate_options.push({$sort: sort});
     }
 
     aggregate_options.push({

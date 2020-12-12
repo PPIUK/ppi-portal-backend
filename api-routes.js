@@ -22,7 +22,7 @@ module.exports = (app) => {
     router.route('/profiles/public').get(app.oauth.authenticate(),
                                                profileController.grantAccess('readAny'),
                                                profileController.indexPublic);
-    router.route('/profiles/me/').get(app.oauth.authenticate(),
+    router.route('/profiles/me').get(app.oauth.authenticate(),
                                             profileController.grantAccess('readOwn'),
                                             profileController.viewSelf)
                                        .patch(app.oauth.authenticate(),
