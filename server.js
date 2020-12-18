@@ -1,53 +1,79 @@
 'use strict';
+
+/*
+    PPI UK Portal Application Backend
+
+    Backend REST API for PPI UK portal
+*/
+
+/*
+    server.js - entry point for application server
+
+    TAGIGIT - PPI UK
+*/
+
+/*
+    Server Dependencies & Configuration
+*/
+
+require('dotenv').config();
+
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
-const mongoSanitize = require('express-mongo-sanitize');
-const oAuthServer = require('express-oauth-server');
-const oAuthService = require('./auth/tokenService')
+
+const mongoose = require('mongoose').set(
+    'debug',
+    process.env.NODE_ENV == 'development'
+);
+
+const mailTransporter = require('./config/nodemailer');
 
 var app = express();
 
-var staticPath = path.join(__dirname, '/');
-var port = process.env.PORT || 3000;
-// var mongoUri = 'mongodb+srv://tefohulu:$Hutama97@databasecluster.eyzgc.mongodb.net/database?retryWrites=true&w=majority';
-var mongoUri = 'mongodb://localhost/database';
+// approot
+global.appRoot = path.resolve(__dirname);
 
-let mongoose = require("mongoose").set('debug', true);
-let bodyParser = require("body-parser");
-let apiRoutes = require("./api-routes");
+// logger
+const logger = require('./config/winston');
+logger.info('Server is starting...');
 
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
+/*
+    Import all Mongo Models
+*/
 
-app.use(bodyParser.json());
+logger.info('Loading models...');
+const modelDir = path.join(global.appRoot, 'models');
+fs.readdirSync(modelDir).forEach((file) => require(path.join(modelDir, file)));
+logger.info('Successfully loaded models!');
 
-app.use(mongoSanitize());
+/*
+    Configure Express Server & Import Routes
+*/
 
-mongoose.connect(mongoUri, { useNewUrlParser: true });
-var db = mongoose.connection;
+logger.info('Starting express server...');
+require('./config/express')(app, logger);
+app.use('/api', require('./routes')(app));
 
-if (!db)
-    console.log("Error connecting db")
-else
-    console.log("Db connected successfully")
+/*
+    Connect to DB & Start Server
+*/
 
-app.oauth = new oAuthServer({
-    model: oAuthService,
-    requireClientAuthentication: {refresh_token: false, password: false},
-    refreshTokenLifetime: 86400,
-    continueMiddleware: true,
-    debug: true
-})
-
-app.use(express.static(staticPath));
-
-// Allows you to set port in the project properties.
-app.set('port', port);
-app.get('/', (req, res) => res.send('Hello World with Express'));
-
-app.use('/api', apiRoutes(app));
-
-var server = app.listen(app.get('port'), function () {
-    console.log('Running RestHub on port ' + port);
+module.exports = new Promise((resolve, reject) => {
+    mongoose.connection
+        .on('error', (err) => {
+            logger.error(err);
+            reject(err);
+        })
+        .once('open', () => {
+            let port = app.get('port');
+            app.listen(port);
+            logger.info(`Server started on port: ${port}`);
+            resolve(app);
+        });
+    mongoose.connect(process.env.DBURL, {
+        keepAlive: 1,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+    });
 });

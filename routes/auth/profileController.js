@@ -1,10 +1,19 @@
-const Profile = require('./profileModel');
+const mongoose = require('mongoose');
+
+const Profile = mongoose.model('Profile');
 const AccessControl = require('accesscontrol');
-const ac = require('./auth/roles');
+const ac = require('./roles');
 // Profile.createIndexes();
 
 const baseUri = 'http://localhost:3000/api';
-const publicInfo = ['fullName', 'university', 'degreeLevel', 'faculty', 'course', 'branch'];
+const publicInfo = [
+    'fullName',
+    'university',
+    'degreeLevel',
+    'faculty',
+    'course',
+    'branch',
+];
 
 /**
  * Gets info of all users. Depending on the requester's role/privileges, the behaviour is different:
@@ -36,18 +45,19 @@ exports.index = function (req, res) {
     let limit = parseInt(req.query.limit) || 5;
 
     const options = {
-        page, limit,
+        page,
+        limit,
         customLabels: {
             totalDocs: 'totalProfiles',
-            docs: 'profiles'
-        }
+            docs: 'profiles',
+        },
     };
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
         profiles.profiles = profiles.profiles.map((_profile) => {
             if (_profile.branch === res.locals.oauth.token.user.branch) {
@@ -57,8 +67,8 @@ exports.index = function (req, res) {
             }
         });
         return res.status(200).json({
-            message: "Profiles retrieved successfully",
-            data: profiles
+            message: 'Profiles retrieved successfully',
+            data: profiles,
         });
     });
 };
@@ -91,26 +101,27 @@ exports.indexPublic = function (req, res) {
     let limit = parseInt(req.query.limit) || 5;
 
     const options = {
-        page, limit,
+        page,
+        limit,
         customLabels: {
             totalDocs: 'totalProfiles',
-            docs: 'profiles'
-        }
+            docs: 'profiles',
+        },
     };
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
         profiles.profiles = AccessControl.filter(profiles.profiles, publicInfo);
         return res.status(200).json({
-            message: "Profiles retrieved successfully",
-            data: profiles
+            message: 'Profiles retrieved successfully',
+            data: profiles,
         });
     });
-}
+};
 
 /**
  * Creates new profile.
@@ -129,10 +140,10 @@ exports.indexPublic = function (req, res) {
 exports.new = function (req, res) {
     if (req.body.branch !== res.locals.oauth.token.user.branch) {
         return res.status(403).json({
-            message: "You don't have enough privilege to do this action"
+            message: "You don't have enough privilege to do this action",
         });
     }
-    Profile.exists({email: req.body.email}, function(err, emailExists){
+    Profile.exists({ email: req.body.email }, function (err, emailExists) {
         if (err) {
             return res.status(400).json({
                 message: err.message,
@@ -140,7 +151,7 @@ exports.new = function (req, res) {
         }
         if (emailExists) {
             return res.status(409).json({
-                message: "Email already registered.",
+                message: 'Email already registered.',
             });
         }
 
@@ -152,16 +163,16 @@ exports.new = function (req, res) {
                 });
             }
 
-            return res.status(201)
+            return res
+                .status(201)
                 .location(baseUri + '/profiles/' + profile._id)
                 .json({
                     message: 'New profile created!',
-                    data: profile
+                    data: profile,
                 });
-        })
+        });
     });
 };
-
 
 /**
  * Gets private info of a user if the requester have dataAccess role and is in the same branch as the requested user.
@@ -175,29 +186,33 @@ exports.new = function (req, res) {
  * @return res.body.data requested profile
  */
 exports.view = function (req, res) {
-    Profile.findById(req.params.profile_id, {_id: 0, __v: 0}, function (err, profile) {
-        if (profile === null || err && err.name === 'CastError') {
-            return res.status(404).json({
-                message: "Id not found"
+    Profile.findById(
+        req.params.profile_id,
+        { _id: 0, __v: 0 },
+        function (err, profile) {
+            if (profile === null || (err && err.name === 'CastError')) {
+                return res.status(404).json({
+                    message: 'Id not found',
+                });
+            } else if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+
+            let _profile;
+            if (profile.branch !== res.locals.oauth.token.user.branch) {
+                _profile = AccessControl.filter(profile._doc, publicInfo);
+            } else {
+                _profile = req.permission.filter(profile._doc);
+            }
+
+            return res.status(200).json({
+                message: 'Profile details returned successfully!',
+                data: _profile,
             });
-        } else if (err) {
-            return res.status(500).json({
-                message: err.message
-            })
         }
-
-        let _profile;
-        if (profile.branch !== res.locals.oauth.token.user.branch) {
-            _profile = AccessControl.filter(profile._doc, publicInfo);
-        } else {
-            _profile = req.permission.filter(profile._doc);
-        }
-
-        return res.status(200).json({
-            message: 'Profile details returned successfully!',
-            data: _profile
-        });
-    });
+    );
 };
 
 /**
@@ -212,19 +227,19 @@ exports.view = function (req, res) {
  */
 exports.viewPublic = function (req, res) {
     Profile.findById(req.params.profile_id, function (err, profile) {
-        if (profile === null || err && err.name === 'CastError') {
+        if (profile === null || (err && err.name === 'CastError')) {
             return res.status(404).json({
-                message: "Id not found"
+                message: 'Id not found',
             });
         } else if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
 
         return res.status(200).json({
             message: 'Public profile details returned successfully!',
-            data: AccessControl.filter(profile._doc, publicInfo)
+            data: AccessControl.filter(profile._doc, publicInfo),
         });
     });
 };
@@ -242,40 +257,45 @@ exports.viewPublic = function (req, res) {
  * @return res.body.data the newly updated profile
  */
 exports.update = function (req, res) {
-    if(req.body.password) {
+    if (req.body.password) {
         return res.status(403).json({
-            message: "You don't have enough privilege to do this action"
+            message: "You don't have enough privilege to do this action",
         });
     }
 
-    Profile.findById(req.params.profile_id, function(err, profile) {
-        if (profile === null || err && err.name === 'CastError') {
+    Profile.findById(req.params.profile_id, function (err, profile) {
+        if (profile === null || (err && err.name === 'CastError')) {
             return res.status(404).json({
-                message: "Id not found"
+                message: 'Id not found',
             });
         }
         if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
         if (profile.branch !== res.locals.oauth.token.user.branch) {
             return res.status(403).json({
-                message: "You don't have enough privilege to do this action"
+                message: "You don't have enough privilege to do this action",
             });
         }
 
-        Profile.findByIdAndUpdate(req.params.profile_id, req.body, {new: true}, function (err, profile) {
-            if (err) {
-                return res.status(500).json({
-                    message: err.message
-                })
+        Profile.findByIdAndUpdate(
+            req.params.profile_id,
+            req.body,
+            { new: true },
+            function (err, profile) {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(200).json({
+                    message: 'Profile info updated',
+                    data: req.permission.filter(profile._doc),
+                });
             }
-            return res.status(200).json({
-                message: 'Profile info updated',
-                data: req.permission.filter(profile._doc)
-            });
-        });
+        );
     });
 };
 
@@ -290,28 +310,28 @@ exports.update = function (req, res) {
  * @return res.body.message
  */
 exports.delete = function (req, res) {
-    Profile.findById(req.params.profile_id, function(err, profile) {
-        if (profile === null || err && err.name === 'CastError') {
+    Profile.findById(req.params.profile_id, function (err, profile) {
+        if (profile === null || (err && err.name === 'CastError')) {
             return res.status(404).json({
-                message: "Id not found"
+                message: 'Id not found',
             });
         }
-        if(err) {
+        if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
         if (profile.branch !== res.locals.oauth.token.user.branch) {
             return res.status(403).json({
-                message: "You don't have enough privilege to do this action"
+                message: "You don't have enough privilege to do this action",
             });
         }
 
-        Profile.findByIdAndDelete(req.params.profile_id, function (err, profile) {
-            if(err) {
+        Profile.findByIdAndDelete(req.params.profile_id, function (err) {
+            if (err) {
                 return res.status(500).json({
-                    message: err.message
-                })
+                    message: err.message,
+                });
             }
             return res.status(200).json({
                 message: 'Profile deleted!',
@@ -328,19 +348,23 @@ exports.delete = function (req, res) {
  * @return res.body.message
  * @return res.body.data own profile details (not including password)
  */
-exports.viewSelf = function(req, res) {
-    Profile.findById(res.locals.oauth.token.user, {password: 0}, function(err, profile) {
-        if (err) {
-            return res.status(500).json({
-                message: err.message
-            })
+exports.viewSelf = function (req, res) {
+    Profile.findById(
+        res.locals.oauth.token.user,
+        { password: 0 },
+        function (err, profile) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            return res.status(200).json({
+                message: 'Own profile details returned successfully',
+                data: req.permission.filter(profile._doc),
+            });
         }
-        return res.status(200).json({
-            message: 'Own profile details returned successfully',
-            data: req.permission.filter(profile._doc)
-        });
-    });
-}
+    );
+};
 
 /**
  * Updates own profile info. Can also be called by basic role.
@@ -352,26 +376,34 @@ exports.viewSelf = function(req, res) {
  * @return res.body.message
  * @return res.body.data the newly updated profile
  */
-exports.updateSelf = function(req, res) {
-    if(req.body.password) {
+exports.updateSelf = function (req, res) {
+    if (req.body.password) {
         return res.status(400).json({
-            message: "Password should not be updated using this method"
-        })
-    }
-    Profile.findByIdAndUpdate(res.locals.oauth.token.user, req.body, {new: true}, function(err, profile) {
-        if (err) {
-            return res.status(500).json({
-                message: err.message
-            })
-        }
-        let filteredData = req.permission.filter(profile._doc);
-        filteredData = AccessControl.filter(filteredData, ['*', '!password']);
-        return res.status(200).json({
-            message: 'Own profile details updated successfully',
-            data: filteredData
+            message: 'Password should not be updated using this method',
         });
-    });
-}
+    }
+    Profile.findByIdAndUpdate(
+        res.locals.oauth.token.user,
+        req.body,
+        { new: true },
+        function (err, profile) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            let filteredData = req.permission.filter(profile._doc);
+            filteredData = AccessControl.filter(filteredData, [
+                '*',
+                '!password',
+            ]);
+            return res.status(200).json({
+                message: 'Own profile details updated successfully',
+                data: filteredData,
+            });
+        }
+    );
+};
 
 /**
  * Manually verify user (i.e. change role of user to 'verified').
@@ -384,34 +416,38 @@ exports.updateSelf = function(req, res) {
  * @return res.statusCode 500 if error
  * @return res.body.message
  */
-exports.verify = function(req, res) {
-    Profile.findById(req.params.profile_id, function(err, profile) {
-        if (profile === null || err && err.name === 'CastError') {
+exports.verify = function (req, res) {
+    Profile.findById(req.params.profile_id, function (err, profile) {
+        if (profile === null || (err && err.name === 'CastError')) {
             return res.status(404).json({
-                message: "Id not found"
+                message: 'Id not found',
             });
         }
         if (err) {
             return res.status(500).json({
-                message: err.message
-            })
+                message: err.message,
+            });
         }
         if (profile.branch !== res.locals.oauth.token.user.branch) {
             return res.status(403).json({
-                message: "You don't have enough privilege to do this action"
+                message: "You don't have enough privilege to do this action",
             });
         }
 
-        Profile.findByIdAndUpdate(req.params.profile_id, {role: 'verified'},  function (err, profile) {
-            if (err) {
-                return res.status(500).json({
-                    message: err.message
-                })
+        Profile.findByIdAndUpdate(
+            req.params.profile_id,
+            { role: 'verified' },
+            function (err) {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(200).json({
+                    message: 'User is now verified',
+                });
             }
-            return res.status(200).json({
-                message: 'User is now verified',
-            });
-        });
+        );
     });
 };
 
@@ -421,77 +457,79 @@ exports.verify = function(req, res) {
  */
 exports.grantAccess = function (action) {
     return async (req, res, next) => {
-        const permission = ac.can(res.locals.oauth.token.user.role)[action]('profile');
-        if(!permission.granted) {
+        const permission = ac
+            .can(res.locals.oauth.token.user.role)
+            [action]('profile');
+        if (!permission.granted) {
             return res.status(403).json({
-                message: "You don't have enough privilege to do this action"
+                message: "You don't have enough privilege to do this action",
             });
         }
         req.permission = permission;
         return next();
-    }
-}
+    };
+};
 
 /**
  * Aggregate options, such as filtering and sorting
  */
-function getDefaultAggregateOptions (req) {
+function getDefaultAggregateOptions(req) {
     let aggregate_options = [];
 
     //Filtering
     let match = {};
     if (req.query.full_name) {
-        match.fullName = {$regex: req.query.full_name, $options: 'i'};
+        match.fullName = { $regex: req.query.full_name, $options: 'i' };
     }
     if (req.query.branch) {
-        match.branch = {$regex: req.query.branch, $options: 'i'};
+        match.branch = { $regex: req.query.branch, $options: 'i' };
     }
     if (req.query.university) {
-        match.university = {$regex: req.query.university, $options: 'i'};
+        match.university = { $regex: req.query.university, $options: 'i' };
     }
     if (req.query.course) {
-        match.course = {$regex: req.query.course, $options: 'i'};
+        match.course = { $regex: req.query.course, $options: 'i' };
     }
     if (req.query.faculty) {
-        match.faculty = {$regex: req.query.faculty, $options: 'i'};
+        match.faculty = { $regex: req.query.faculty, $options: 'i' };
     }
     if (req.query.degree_level) {
-        match.degreeLevel = {$regex: req.query.degree_level, $options: 'i'};
+        match.degreeLevel = { $regex: req.query.degree_level, $options: 'i' };
     }
-    aggregate_options.push({$match: match});
+    aggregate_options.push({ $match: match });
 
     //Sorting
-    if(req.query.sort) {
+    if (req.query.sort) {
         let sortQueryMap = {};
         let sortQuery = req.query.sort.split(',');
-        sortQuery.map(e => {
+        sortQuery.map((e) => {
             var splitted = e.split(':');
             sortQueryMap[splitted[0]] = splitted[1];
         });
-        let sort = {}
-        if(sortQueryMap["full_name"]) {
-            sort.fullName = sortQueryMap["full_name"] === 'desc' ? -1 : 1;
+        let sort = {};
+        if (sortQueryMap['full_name']) {
+            sort.fullName = sortQueryMap['full_name'] === 'desc' ? -1 : 1;
         }
-        if(sortQueryMap["branch"]) {
-            sort.branch = sortQueryMap["branch"] === 'desc' ? -1 : 1;
+        if (sortQueryMap['branch']) {
+            sort.branch = sortQueryMap['branch'] === 'desc' ? -1 : 1;
         }
-        if(sortQueryMap["university"]) {
-            sort.university = sortQueryMap["university"] === 'desc' ? -1 : 1;
+        if (sortQueryMap['university']) {
+            sort.university = sortQueryMap['university'] === 'desc' ? -1 : 1;
         }
-        if(sortQueryMap["faculty"]) {
-            sort.faculty = sortQueryMap["faculty"] === 'desc' ? -1 : 1;
+        if (sortQueryMap['faculty']) {
+            sort.faculty = sortQueryMap['faculty'] === 'desc' ? -1 : 1;
         }
-        if(sortQueryMap["course"]) {
-            sort.course = sortQueryMap["course"] === 'desc' ? -1 : 1;
+        if (sortQueryMap['course']) {
+            sort.course = sortQueryMap['course'] === 'desc' ? -1 : 1;
         }
-        if(sortQueryMap["degree_level"]) {
-            sort.degreeLevel = sortQueryMap["degreeLevel"] === 'desc' ? -1 : 1;
+        if (sortQueryMap['degree_level']) {
+            sort.degreeLevel = sortQueryMap['degreeLevel'] === 'desc' ? -1 : 1;
         }
-        aggregate_options.push({$sort: sort});
+        aggregate_options.push({ $sort: sort });
     }
 
     aggregate_options.push({
-        $unset: ["password"]
+        $unset: ['password'],
     });
 
     return aggregate_options;

@@ -109,4 +109,3 @@ bin/
 obj/
 *.njsproj
 *.njsproj.user
-config/nodemailer/keys/no-reply.json
