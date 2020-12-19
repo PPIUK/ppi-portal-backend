@@ -115,6 +115,10 @@ profileSchema.methods.generateVerificationToken = function () {
     return new Token(payload);
 };
 
+profileSchema.statics.get = function (callback, limit) {
+    mongoose.model('Profile').find(callback).limit(limit);
+};
+
 profileSchema.plugin(aggregatePaginate);
 
 mongoose.model('Profile', profileSchema, 'profiles');
