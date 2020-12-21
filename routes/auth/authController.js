@@ -348,8 +348,10 @@ exports.forgotPassword = function (req, res) {
                     message: err.message,
                 });
             }
-            let baseUri = 'localhost:3000'; //TODO: change for production
-            let link = baseUri + '/api/auth/reset-password/' + token.token;
+            let link =
+                process.env.BASE_URI +
+                '/api/auth/reset-password/' +
+                token.token;
 
             // TODO: modify as needed, add templating?
             let message = {
@@ -472,8 +474,7 @@ async function sendVerificationEmail(profile, req, res) {
                 message: err.message,
             });
         }
-        let baseUri = 'localhost:3000'; //TODO: change for production
-        let link = baseUri + '/api/auth/verify-email/' + token.token;
+        let link = process.env.BASE_URI + '/api/auth/verify-email/' + token.token;
 
         // TODO: modify as needed, add templating?
         let message = {

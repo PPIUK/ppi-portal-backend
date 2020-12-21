@@ -5,7 +5,6 @@ const AccessControl = require('accesscontrol');
 const ac = require('./roles');
 // Profile.createIndexes();
 
-const baseUri = 'http://localhost:3000/api';
 const publicInfo = [
     'fullName',
     'university',
@@ -165,7 +164,7 @@ exports.new = function (req, res) {
 
             return res
                 .status(201)
-                .location(baseUri + '/profiles/' + profile._id)
+                .location(process.env.BASE_URI + '/profiles/' + profile._id)
                 .json({
                     message: 'New profile created!',
                     data: profile,
