@@ -435,7 +435,7 @@ exports.verify = function (req, res) {
 
         Profile.findByIdAndUpdate(
             req.params.profile_id,
-            { role: 'verified' },
+            {$push: {roles: 'verified'}},
             function (err) {
                 if (err) {
                     return res.status(500).json({
@@ -457,7 +457,7 @@ exports.verify = function (req, res) {
 exports.grantAccess = function (action) {
     return async (req, res, next) => {
         const permission = ac
-            .can(res.locals.oauth.token.user.role)
+            .can(res.locals.oauth.token.user.roles)
             [action]('profile');
         if (!permission.granted) {
             return res.status(403).json({

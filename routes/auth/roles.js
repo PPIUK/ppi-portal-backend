@@ -32,9 +32,9 @@ const grants = {
                 'faculty',
                 'course',
                 'branch',
-                'role',
+                'roles',
             ],
-            'update:any': ['role'],
+            'update:any': ['roles'],
         },
     },
     dataAccess: {
