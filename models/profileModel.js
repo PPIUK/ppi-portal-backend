@@ -89,9 +89,9 @@ var profileSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
-    role: {
-        type: String,
-        default: 'basic',
+    roles: {
+        type: [String],
+        default: ['basic'],
         enum: ['basic', 'verified', 'verifier', 'dataAccess', 'voteOrganiser'],
     },
 });
