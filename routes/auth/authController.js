@@ -474,7 +474,8 @@ async function sendVerificationEmail(profile, req, res) {
                 message: err.message,
             });
         }
-        let link = process.env.BASE_URI + '/api/auth/verify-email/' + token.token;
+        let link =
+            process.env.BASE_URI + '/api/auth/verify-email/' + token.token;
 
         // TODO: modify as needed, add templating?
         let message = {

@@ -75,6 +75,12 @@ module.exports = (app) => {
             profileController.verify
         );
 
+    let publicController = require('./publicController');
+    router.route('/public/members/uni').get(publicController.memberSummaryUni);
+    router
+        .route('/public/members/branch')
+        .get(publicController.memberSummaryBranch);
+
     var authController = require('./auth/authController');
     router.route('/auth/register').post(authController.register);
     router.route('/auth/register/new').post(authController.registerNew);

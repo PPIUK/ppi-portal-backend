@@ -11,6 +11,7 @@
 
 const mongoSanitize = require('express-mongo-sanitize');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const oAuthServer = require('express-oauth-server');
 const oAuthService = require(global.appRoot + '/routes/auth/tokenService');
@@ -26,6 +27,9 @@ module.exports = function (app, logger) {
 
     // setup mongo sanitizer
     app.use(mongoSanitize());
+
+    // allow CORS
+    app.use(cors());
 
     // debug logging
     app.use((req, res, next) => {
