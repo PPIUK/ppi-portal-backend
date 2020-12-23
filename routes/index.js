@@ -101,6 +101,30 @@ module.exports = (app) => {
         .get(authController.allowResetPassword)
         .post(authController.resetPassword);
 
+    let mvpAwardsController = require('./forms/mvpAwardsController');
+    router
+        .route('/forms/mvpawards/submissions/all')
+        .get(
+            app.oauth.authenticate(),
+            mvpAwardsController.index
+        );
+    router
+        .route('/forms/mvpawards/submissions/:user_id')
+        .get(
+            app.oauth.authenticate(),
+            mvpAwardsController.view
+        );
+    router
+        .route('/forms/mvpawards/edit')
+        .get(
+            app.oauth.authenticate(),
+            mvpAwardsController.viewSelf
+        )
+        .post(
+            app.oauth.authenticate(),
+            mvpAwardsController.newSelf
+        )
+
     // Export API routes
     return router;
 };
