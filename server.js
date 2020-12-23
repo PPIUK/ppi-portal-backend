@@ -27,8 +27,6 @@ const mongoose = require('mongoose').set(
     process.env.NODE_ENV == 'development'
 );
 
-const mailTransporter = require('./config/nodemailer');
-
 var app = express();
 
 // approot

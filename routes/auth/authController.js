@@ -5,45 +5,7 @@ const Token = mongoose.model('VerificationToken');
 const AccessToken = mongoose.model('AccessToken');
 const RefreshToken = mongoose.model('RefreshToken');
 
-const nodemailer = require('nodemailer');
-/*
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-const googleClientId = "645266057885-8jonvmv73i4lo0r415spdhfd1d7fgm9g.apps.googleusercontent.com";
-const googleClientSecret = "0pWNHcQj5DLFfa2s4xMdkJpe";
-const googleRefreshToken = "1//04Ego7vgYu_rnCgYIARAAGAQSNwF-L9Ir2pj-mncUGFklRwbjkkXUiKvWjwGcI-2dH0N68OEthv4QdKMV6SytARHmEnd8ouQIhJk";
-
-const googleOAuth2Client = new OAuth2(googleClientId,
-    googleClientSecret, "https://developers.google.com/oauthplayground");
-
-googleOAuth2Client.setCredentials({
-    refresh_token: googleRefreshToken
-})
-
-let googleAccessToken = googleOAuth2Client.getAccessToken();
-
-let transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-        type: "OAuth2",
-        user: "", //your gmail account you used to set the project up in google cloud console"
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
-        refreshToken: googleRefreshToken,
-        accessToken: googleAccessToken //access token variable we defined earlier
-    }});
-*/
-// TODO: this is using an example account, change!
-let transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-        //test email
-        user: 'alaina.schamberger3@ethereal.email', // generated ethereal user
-        pass: 'wMnrkdG1gV1VMPqN88', // generated ethereal password
-    },
-});
+const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
@@ -479,14 +441,15 @@ async function sendVerificationEmail(profile, req, res) {
 
         // TODO: modify as needed, add templating?
         let message = {
-            from: '"Fred Foo 👻" <foo@example.com>', // sender address
+            from: 'PPI UK Friendly Bot <ppiunitedkingdom@gmail.com>', // sender address
+            replyTo: 'no-reply@example.com',
             to: profile.email, // list of receivers
-            subject: 'Verify your email', // Subject line
+            subject: 'Verify your PPI UK Portal account!', // Subject line
             text: link, // plain text body
-            html: '<a href=' + link + '>Click here</a>', // html body
+            html: `<a href="${link}">Click here</a> to verify your account!\n\nUse this link if the above does not work:\n${link}`, // html body
         };
 
-        transporter.sendMail(message, (err) => {
+        mailTransporter.sendMail(message, (err) => {
             if (err) {
                 return res.status(500).json({
                     message: err.message,
