@@ -6,6 +6,7 @@ const ac = require('./roles');
 // Profile.createIndexes();
 
 const publicInfo = [
+    '_id',
     'fullName',
     'university',
     'degreeLevel',
