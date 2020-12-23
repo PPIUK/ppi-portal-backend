@@ -141,7 +141,7 @@ exports.registerNew = function (req, res) {
             });
         }
 
-        let profile = new Profile(req.body);
+        let profile = new Profile({...req.body, emailVerified: false, roles: ['basic']});
 
         try {
             await profile.setPassword(req.body.password);
