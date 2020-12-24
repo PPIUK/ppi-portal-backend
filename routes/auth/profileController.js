@@ -27,6 +27,7 @@ const publicInfo = [
  * @param req.query.course filter by course
  * @param req.query.faculty filter by faculty
  * @param req.query.degree_level filter by degree level
+ * @param req.query.paginate true if wants to enable pagination, false if wants to retrieve all data (default is false)
  * @param req.query.sort field:asc/desc
  * @param req.query.page current page
  * @param req.query.limit number of documents per page
@@ -42,8 +43,10 @@ exports.index = function (req, res) {
     //Pagination
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 5;
+    let pagination = req.query.paginate || false;
 
     const options = {
+        pagination,
         page,
         limit,
         customLabels: {
@@ -82,6 +85,7 @@ exports.index = function (req, res) {
  * @param req.query.course filter by course
  * @param req.query.faculty filter by faculty
  * @param req.query.degree_level filter by degree level
+ * @param req.query.paginate true if wants to enable pagination, false if wants to retrieve all data (default is false)
  * @param req.query.sort field:asc/desc
  * @param req.query.page current page
  * @param req.query.limit number of documents per page
@@ -98,8 +102,10 @@ exports.indexPublic = function (req, res) {
     //Pagination
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 5;
+    let pagination = req.query.paginate || false;
 
     const options = {
+        pagination,
         page,
         limit,
         customLabels: {
