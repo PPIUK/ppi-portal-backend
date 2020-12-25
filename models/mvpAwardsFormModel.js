@@ -33,9 +33,17 @@ const mvpAwardsFormSchema = new mongoose.Schema(
         },
         awardIndicators: [
             {
-                awardType: [
+                award: {
+                    type: String,
+                    enum: [
+                        'Academic Excellence',
+                        'Best Academic Contribution',
+                        'Most Dedicated for Tackling Real World Problems',
+                    ],
+                },
+                indicators: [
                     {
-                        indicator: { type: String },
+                        name: { type: String },
                         subindicators: [
                             {
                                 name: { type: String },
