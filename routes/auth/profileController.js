@@ -460,16 +460,19 @@ exports.verify = function (req, res) {
 // TODO: document
 exports.search = {
     nameLookup: (req, res) => {
-        Profile.find({ fullName: /req.body.name/ }, (err, profiles) => {
-            if (err) return res.status(500).json({ message: err.message });
+        Profile.find(
+            { fullName: { $regex: req.query.name, $options: 'i' } },
+            (err, profiles) => {
+                if (err) return res.status(500).json({ message: err.message });
 
-            return res.status(200).json({
-                message: 'Name lookup successful',
-                data: profiles.map((profile) =>
-                    req.permission.filter(profile._doc)
-                ),
-            });
-        });
+                return res.status(200).json({
+                    message: 'Name lookup successful',
+                    data: profiles.map((profile) =>
+                        req.permission.filter(profile._doc)
+                    ),
+                });
+            }
+        );
     },
 };
 
