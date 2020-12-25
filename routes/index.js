@@ -104,26 +104,14 @@ module.exports = (app) => {
     let mvpAwardsController = require('./forms/mvpAwardsController');
     router
         .route('/forms/mvpawards/submissions/all')
-        .get(
-            app.oauth.authenticate(),
-            mvpAwardsController.index
-        );
+        .get(app.oauth.authenticate(), mvpAwardsController.index);
     router
         .route('/forms/mvpawards/submissions/:user_id')
-        .get(
-            app.oauth.authenticate(),
-            mvpAwardsController.view
-        );
+        .get(app.oauth.authenticate(), mvpAwardsController.view);
     router
         .route('/forms/mvpawards/edit')
-        .get(
-            app.oauth.authenticate(),
-            mvpAwardsController.viewSelf
-        )
-        .post(
-            app.oauth.authenticate(),
-            mvpAwardsController.newSelf
-        )
+        .get(app.oauth.authenticate(), mvpAwardsController.viewSelf)
+        .post(app.oauth.authenticate(), mvpAwardsController.newSelf);
 
     // Export API routes
     return router;

@@ -7,15 +7,44 @@ const mvpAwardsFormSchema = new mongoose.Schema(
             required: true,
             ref: 'Profile',
         },
-        formField: {
+        submitterType: {
             type: String,
-            required: true,
+            enum: ['Nominee', 'Nominator'],
         },
+        awardTypes: {
+            type: [String],
+            validator: (field) => {
+                for (let award in field)
+                    if (
+                        ![
+                            'Academic Excellence',
+                            'Best Academic Contribution',
+                            'Most Dedicated for Tackling Real World Problems',
+                        ].includes(award)
+                    )
+                        return false;
+                return true;
+            },
+        },
+        awardIndicators: [
+            {
+                awardType: [
+                    {
+                        indicator: { type: String },
+                        subindicators: [
+                            {
+                                name: { type: String },
+                                elaboration: { type: String },
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
         submitted: {
             type: Boolean,
             default: false,
-            required: true,
-        }
+        },
     },
     { timestamps: true }
 );
