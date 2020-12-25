@@ -3,15 +3,16 @@ const AccessControl = require('accesscontrol');
 const grants = {
     basic: {
         profile: {
-            'read:own': ['*', '!_id', '!__v'],
+            'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
         },
     },
     verified: {
         profile: {
-            'read:own': ['*', '!_id', '!__v'],
+            'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
             'read:any': [
+                '_id',
                 'fullName',
                 'university',
                 'degreeLevel',
@@ -23,9 +24,10 @@ const grants = {
     },
     verifier: {
         profile: {
-            'read:own': ['*', '!_id', '!__v'],
+            'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
             'read:any': [
+                '_id',
                 'fullName',
                 'university',
                 'degreeLevel',
@@ -39,10 +41,10 @@ const grants = {
     },
     dataAccess: {
         profile: {
-            'read:own': ['*', '!_id', '!__v'],
+            'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
             'create:any': ['*', '!_id', '!__v', '!password'],
-            'read:any': ['*', '!_id', '!__v', '!password'],
+            'read:any': ['*', '!__v', '!password'],
             'update:any': ['*', '!_id', '!__v', '!password'],
             'delete:any': ['*'],
         },
