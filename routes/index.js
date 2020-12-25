@@ -111,7 +111,7 @@ module.exports = (app) => {
     router
         .route('/forms/mvpawards/edit')
         .get(app.oauth.authenticate(), mvpAwardsController.viewSelf)
-        .post(app.oauth.authenticate(), mvpAwardsController.newSelf);
+        .post(app.oauth.authenticate(), mvpAwardsController.upsertSelf);
 
     // Export API routes
     return router;
