@@ -108,8 +108,11 @@ exports.upsertSelf = function (req, res) {
                     message: 'Form alrady submitted!',
                 });
 
-            form.nominatedUser = req.body.nominatedUser;
             form.submitterType = req.body.submitterType;
+            form.nominatedUser =
+                req.body.submitterType == 'Nominator'
+                    ? req.body.nominatedUser
+                    : res.locals.oauth.token.user;
             form.awardTypes = req.body.awardTypes;
             form.awardIndicators = req.body.awardIndicators;
             form.submitted = req.body.submitted;
