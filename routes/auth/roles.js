@@ -5,6 +5,7 @@ const grants = {
         profile: {
             'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
+            'read:any': ['_id', 'fullName'],
         },
     },
     verified: {
