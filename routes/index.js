@@ -1,5 +1,7 @@
 // Filename: api-routes.js
 
+const { get } = require('mongoose');
+
 module.exports = (app) => {
     // Initialize express router
     let router = require('express').Router();
@@ -24,6 +26,14 @@ module.exports = (app) => {
             profileController.grantAccess('createAny'),
             profileController.new
         );
+    router
+        .route('/profiles/search/name')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readAny'),
+            profileController.search.nameLookup
+        );
+
     //Do we need the below endpoint?
     router
         .route('/profiles/public')

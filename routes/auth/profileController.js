@@ -442,7 +442,7 @@ exports.verify = function (req, res) {
 
         Profile.findByIdAndUpdate(
             req.params.profile_id,
-            {$push: {roles: 'verified'}},
+            { $push: { roles: 'verified' } },
             function (err) {
                 if (err) {
                     return res.status(500).json({
@@ -455,6 +455,22 @@ exports.verify = function (req, res) {
             }
         );
     });
+};
+
+// TODO: document
+exports.search = {
+    nameLookup: (req, res) => {
+        Profile.find({ fullName: /req.body.name/ }, (err, profiles) => {
+            if (err) return res.status(500).json({ message: err.message });
+
+            return res.status(200).json({
+                message: 'Name lookup successful',
+                data: profiles.map((profile) =>
+                    req.permission.filter(profile._doc)
+                ),
+            });
+        });
+    },
 };
 
 /**

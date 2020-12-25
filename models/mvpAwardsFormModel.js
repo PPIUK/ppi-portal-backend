@@ -11,7 +11,7 @@ const mvpAwardsFormSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             required: true,
             ref: 'Profile',
-        }
+        },
         submitterType: {
             type: String,
             enum: ['Nominee', 'Nominator'],

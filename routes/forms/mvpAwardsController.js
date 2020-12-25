@@ -104,7 +104,7 @@ exports.upsertSelf = function (req, res) {
             if (!form)
                 form = new MvpAwardsForm({ user: res.locals.oauth.token.user });
             else if (form.submitted)
-                res.status(400).json({
+                return res.status(400).json({
                     message: 'Form alrady submitted!',
                 });
 
