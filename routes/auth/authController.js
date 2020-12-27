@@ -316,7 +316,7 @@ exports.forgotPassword = function (req, res) {
                 });
             }
             let link =
-                'http://' +
+                'https://' +
                 process.env.BASE_URI +
                 '/api/auth/reset-password/' +
                 token.token;
@@ -444,7 +444,7 @@ async function sendVerificationEmail(profile, req, res) {
             });
         }
         let link =
-            'http://' +
+            'https://' +
             process.env.BASE_URI +
             '/api/auth/verify-email/' +
             token.token;
