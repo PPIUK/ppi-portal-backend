@@ -12,6 +12,11 @@ const mvpAwardsFormSchema = new mongoose.Schema(
             required: true,
             ref: 'Profile',
         },
+        areaOfStudy: {
+            type: String,
+            required: true,
+            enum: ['Natural Science', 'Social Science & Humanities'],
+        },
         submitterType: {
             type: String,
             enum: ['Nominee', 'Nominator'],

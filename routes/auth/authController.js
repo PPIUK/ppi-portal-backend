@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const dedent = require('dedent');
 
 const Profile = mongoose.model('Profile');
 const Token = mongoose.model('VerificationToken');
@@ -141,7 +142,11 @@ exports.registerNew = function (req, res) {
             });
         }
 
-        let profile = new Profile({...req.body, emailVerified: false, roles: ['basic']});
+        let profile = new Profile({
+            ...req.body,
+            emailVerified: false,
+            roles: ['basic'],
+        });
 
         try {
             await profile.setPassword(req.body.password);
@@ -311,20 +316,26 @@ exports.forgotPassword = function (req, res) {
                 });
             }
             let link =
+                'http://' +
                 process.env.BASE_URI +
                 '/api/auth/reset-password/' +
                 token.token;
 
             // TODO: modify as needed, add templating?
             let message = {
-                from: '"Fred Foo 👻" <foo@example.com>', // sender address
+                from: 'PPI UK Friendly Bot <ppiunitedkingdom@gmail.com>', // sender address
                 to: profile.email, // list of receivers
                 subject: 'Reset your password', // Subject line
-                text: link, // plain text body
-                html: link, // html body
+                text: dedent`Our friendly bot received your password reset request!
+                
+                Please click the link below to reset your password
+                ${link}
+
+                PPIUK Bot - please do not reply :)
+            `,
             };
 
-            transporter.sendMail(message, (err) => {
+            mailTransporter.sendMail(message, (err) => {
                 if (err) {
                     return res.status(500).json({
                         message: err.message,
@@ -367,9 +378,9 @@ exports.allowResetPassword = function (req, res) {
                 });
             }
 
-            return res.status(200).json({
-                message: 'Token is valid. Redirect to password reset form.',
-            });
+            return res
+                .status(301)
+                .redirect(`/reset-password/${req.params.token}`);
         } catch (err) {
             return res.status(500).json({
                 message: err.message,
@@ -408,11 +419,7 @@ exports.resetPassword = function (req, res) {
                     message: 'Profile for this token is not found.',
                 });
             }
-            if (profile.email !== req.body.email) {
-                return res.status(401).json({
-                    message: 'Token and email address mismatch.',
-                });
-            }
+
             await profile.setPassword(req.body.password);
             await profile.save();
 
