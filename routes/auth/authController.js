@@ -323,7 +323,8 @@ exports.forgotPassword = function (req, res) {
 
             // TODO: modify as needed, add templating?
             let message = {
-                from: 'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
+                from:
+                    'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
                 to: profile.email, // list of receivers
                 subject: 'Reset your password', // Subject line
                 text: dedent`PPI UK Member Portal received your password reset request!
@@ -451,7 +452,8 @@ async function sendVerificationEmail(profile, req, res) {
 
         // TODO: modify as needed, add templating?
         let message = {
-            from: 'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
+            from:
+                'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
             replyTo: 'no-reply@example.com',
             to: profile.email, // list of receivers
             subject: 'Verify your PPI UK Portal account!', // Subject line

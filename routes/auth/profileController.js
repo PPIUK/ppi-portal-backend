@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const Profile = mongoose.model('Profile');
 const AccessControl = require('accesscontrol');
-const ac = require('./roles');
+const ac = require(global.appRoot + '/config/roles');
 // Profile.createIndexes();
 
 const publicInfo = [
