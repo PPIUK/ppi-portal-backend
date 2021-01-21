@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const dedent = require('dedent');
-const JFUM = require('jfum');
-const jfum = new JFUM({
+const uploadHandler = new (require(global.appRoot +
+    '/config/middleware/uploadHandler'))({
     minFileSize: 1000,
     maxFileSize: 5242880, // 5 mB
     acceptFileTypes: /\.(pdf)$/i, // gif, jpg, jpeg, png
@@ -12,6 +12,8 @@ const MvpAwardsForm = mongoose.model('MvpAwardsForm');
 const Profile = mongoose.model('Profile');
 
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
+
+const ac = require(global.appRoot + '/config/roles');
 
 /**
  * Retrieves form submission of a user
@@ -108,15 +110,15 @@ exports.viewSelf = function (req, res) {
  * @return res.body.message
  */
 exports.upsertSelf = [
-    jfum.postHandler.bind(jfum),
+    uploadHandler.postHandler.bind(uploadHandler),
     function (req, res) {
         MvpAwardsForm.findOne(
             { user: res.locals.oauth.token.user },
             async (err, form) => {
                 if (err) return res.status(500).json({ message: err.message });
 
-                if (req.jfum.files.length > 0) {
-                    let file = req.jfum.files[0];
+                if (req.files.files.length > 0) {
+                    let file = req.files.files[0];
                     if (file.errors.length > 0) return res.sendStatus(400);
                     try {
                         fs.renameSync(
@@ -147,6 +149,7 @@ exports.upsertSelf = [
                 form.areaOfStudy = req.body.areaOfStudy;
                 form.awardTypes = req.body.awardTypes;
                 form.awardIndicators = req.body.awardIndicators;
+                form.statement = req.body.statement;
                 form.submitted = req.body.submitted;
 
                 if (req.body.submitted)
@@ -172,3 +175,22 @@ exports.upsertSelf = [
         );
     },
 ];
+
+/**
+ * Find permission for the requested action and role
+ * @param action
+ */
+exports.grantAccess = function (action) {
+    return async (req, res, next) => {
+        const permission = ac
+            .can(res.locals.oauth.token.user.roles)
+            [action]('mvpAwardForm');
+        if (!permission.granted) {
+            return res.status(403).json({
+                message: "You don't have enough privilege to do this action",
+            });
+        }
+        req.permission = permission;
+        return next();
+    };
+};

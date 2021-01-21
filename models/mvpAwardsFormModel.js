@@ -59,6 +59,7 @@ const mvpAwardsFormSchema = new mongoose.Schema(
                 ],
             },
         ],
+        statement: { type: String, default: '' },
         submitted: {
             type: Boolean,
             default: false,
