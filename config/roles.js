@@ -50,6 +50,13 @@ const grants = {
             'delete:any': ['*'],
         },
     },
+
+    // grants for specific forms
+    mvpAwardsAccess: {
+        mvpAwardForm: {
+            'read:any': ['*'],
+        },
+    },
 };
 
 const ac = new AccessControl(grants);
