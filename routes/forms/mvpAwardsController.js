@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const dedent = require('dedent');
 const uploadHandler = new (require(global.appRoot +
     '/config/middleware/uploadHandler'))({
-    minFileSize: 1000,
+    minFileSize: 1,
     maxFileSize: 5242880, // 5 mB
     acceptFileTypes: /\.(pdf)$/i, // gif, jpg, jpeg, png
 });
@@ -36,6 +36,26 @@ exports.view = function (req, res) {
                 message: err.message,
             });
         }
+
+        if (req.query.file)
+            if (
+                fs.existsSync(
+                    global.appRoot +
+                        `/uploads/mvp-awards/supporting/${req.params.user_id}.pdf`
+                )
+            ) {
+                res.writeHead(200, {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Disposition': 'attachment; filename=CV.pdf',
+                    'Content-Transfer-Encoding': 'binary',
+                });
+                return res.end(
+                    fs.readFileSync(
+                        global.appRoot +
+                            `/uploads/mvp-awards/supporting/${req.params.user_id}.pdf`
+                    )
+                );
+            } else return res.status(404);
 
         return res.status(200).json({
             message: 'Form returned successfully!',
@@ -119,6 +139,7 @@ exports.upsertSelf = [
 
                 if (req.files.files.length > 0) {
                     let file = req.files.files[0];
+                    console.log(file.errors);
                     if (file.errors.length > 0) return res.sendStatus(400);
                     try {
                         fs.renameSync(
