@@ -103,17 +103,20 @@ exports.indexPublic = function (req, res) {
     //Pagination
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 5;
-    let pagination = req.query.paginate || false;
+    let pagination = (req.query.paginate === 'true') || false;
 
-    const options = {
+    let options = {
         pagination,
-        page,
-        limit,
         customLabels: {
-            totalDocs: 'totalProfiles',
+        totalDocs: 'totalProfiles',
             docs: 'profiles',
         },
     };
+
+    if (pagination === true) {
+        options.page = page;
+        options.limit = limit;
+    }
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
