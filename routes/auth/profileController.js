@@ -38,23 +38,7 @@ const publicInfo = [
  * @return res.body.data profiles
  */
 exports.index = function (req, res) {
-    let aggregate_options = getDefaultAggregateOptions(req);
-
-    const aggregate = Profile.aggregate(aggregate_options);
-    //Pagination
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 5;
-    let pagination = req.query.paginate || false;
-
-    const options = {
-        pagination,
-        page,
-        limit,
-        customLabels: {
-            totalDocs: 'totalProfiles',
-            docs: 'profiles',
-        },
-    };
+    const { aggregate, options } = getDefaultAggregateOptions(req);
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
@@ -96,27 +80,7 @@ exports.index = function (req, res) {
  * @return res.body.data public info of profiles
  */
 exports.indexPublic = function (req, res) {
-    let aggregate_options = getDefaultAggregateOptions(req);
-
-    const aggregate = Profile.aggregate(aggregate_options);
-
-    //Pagination
-    let page = parseInt(req.query.page) || 1;
-    let limit = parseInt(req.query.limit) || 5;
-    let pagination = (req.query.paginate === 'true') || false;
-
-    let options = {
-        pagination,
-        customLabels: {
-        totalDocs: 'totalProfiles',
-            docs: 'profiles',
-        },
-    };
-
-    if (pagination === true) {
-        options.page = page;
-        options.limit = limit;
-    }
+    const { aggregate, options } = getDefaultAggregateOptions(req);
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
@@ -560,5 +524,25 @@ function getDefaultAggregateOptions(req) {
         $unset: ['password'],
     });
 
-    return aggregate_options;
+    const aggregate = Profile.aggregate(aggregate_options);
+
+    //Pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 5;
+    let pagination = (req.query.paginate === 'true') || false;
+
+    let options = {
+        pagination,
+        customLabels: {
+            totalDocs: 'totalProfiles',
+            docs: 'profiles',
+        },
+    };
+
+    if (pagination === true) {
+        options.page = page;
+        options.limit = limit;
+    }
+
+    return {aggregate, options};
 }
