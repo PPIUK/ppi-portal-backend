@@ -141,6 +141,11 @@ exports.registerNew = function (req, res) {
                 message: 'Password required.',
             });
         }
+        if (req.body.branch === 'All') {
+            return res.status(400).json({
+                message: `Cannot set own branch to 'All'`,
+            })
+        }
 
         let profile = new Profile({
             ...req.body,

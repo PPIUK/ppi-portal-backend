@@ -47,7 +47,10 @@ exports.index = function (req, res) {
             });
         }
         profiles.profiles = profiles.profiles.map((_profile) => {
-            if (_profile.branch === res.locals.oauth.token.user.branch) {
+            if (
+                _profile.branch === res.locals.oauth.token.user.branch ||
+                res.locals.oauth.token.user.branch === 'All'
+            ) {
                 return req.permission.filter(_profile);
             } else {
                 return AccessControl.filter(_profile, publicInfo);
@@ -111,7 +114,10 @@ exports.indexPublic = function (req, res) {
  * @return res.body.data profile that was created
  */
 exports.new = function (req, res) {
-    if (req.body.branch !== res.locals.oauth.token.user.branch) {
+    if (
+        req.body.branch !== res.locals.oauth.token.user.branch &&
+        res.locals.outh.token.user.branch !== 'All'
+    ) {
         return res.status(403).json({
             message: "You don't have enough privilege to do this action",
         });
@@ -174,10 +180,13 @@ exports.view = function (req, res) {
             }
 
             let _profile;
-            if (profile.branch !== res.locals.oauth.token.user.branch) {
-                _profile = AccessControl.filter(profile._doc, publicInfo);
-            } else {
+            if (
+                profile.branch === res.locals.oauth.token.user.branch ||
+                res.locals.oauth.token.user.branch === 'All'
+            ) {
                 _profile = req.permission.filter(profile._doc);
+            } else {
+                _profile = AccessControl.filter(profile._doc, publicInfo);
             }
 
             return res.status(200).json({
@@ -252,6 +261,13 @@ exports.update = function (req, res) {
                 message: "You don't have enough privilege to do this action",
             });
         }
+        if (
+            req.body.branch !== profile.branch &&
+            res.locals.oauth.token.user.branch !== 'All'
+        )
+            return res.status(403).json({
+                message: "You don't have enough privilege to do this action",
+            });
 
         Profile.findByIdAndUpdate(
             req.params.profile_id,
@@ -294,7 +310,10 @@ exports.delete = function (req, res) {
                 message: err.message,
             });
         }
-        if (profile.branch !== res.locals.oauth.token.user.branch) {
+        if (
+            profile.branch !== res.locals.oauth.token.user.branch &&
+            res.locals.oauth.toke.user.branch !== 'All'
+        ) {
             return res.status(403).json({
                 message: "You don't have enough privilege to do this action",
             });
@@ -355,6 +374,35 @@ exports.updateSelf = function (req, res) {
             message: 'Password should not be updated using this method',
         });
     }
+
+    // cannot update own roles, wouldn't happen unless someone
+    // crafted their own request hence the cheeky response
+    if (req.body.roles) {
+        return res.status(400).json({
+            message: 'Nice try :)',
+        });
+    }
+
+    // cannot set own branch to 'All'
+    if (
+        req.body.branch === 'All' &&
+        res.locals.oauth.token.user.branch !== 'All'
+    )
+        return res.status(400).json({
+            message: 'Cannot set own branch to All',
+        });
+
+    // check for priviliged roles, these are untransferrable
+    const disallowedRoles = ['dataAccess', 'verifier'];
+    if (req.body.branch !== res.locals.oauth.token.user.branch) {
+        for (let role of res.locals.oauth.token.user.roles) {
+            if (disallowedRoles.includes(role))
+                return res.status(400).json({
+                    message:
+                        'Cannot transfer branches with privileged roles. Please have them removed first.',
+                });
+        }
+    }
     Profile.findByIdAndUpdate(
         res.locals.oauth.token.user,
         req.body,
@@ -401,7 +449,10 @@ exports.verify = function (req, res) {
                 message: err.message,
             });
         }
-        if (profile.branch !== res.locals.oauth.token.user.branch) {
+        if (
+            profile.branch !== res.locals.oauth.token.user.branch &&
+            res.locals.oauth.token.user.branch !== 'All'
+        ) {
             return res.status(403).json({
                 message: "You don't have enough privilege to do this action",
             });
@@ -529,7 +580,7 @@ function getDefaultAggregateOptions(req) {
     //Pagination
     let page = parseInt(req.query.page) || 1;
     let limit = parseInt(req.query.limit) || 5;
-    let pagination = (req.query.paginate === 'true') || false;
+    let pagination = req.query.paginate === 'true' || false;
 
     let options = {
         pagination,
@@ -544,5 +595,5 @@ function getDefaultAggregateOptions(req) {
         options.limit = limit;
     }
 
-    return {aggregate, options};
+    return { aggregate, options };
 }

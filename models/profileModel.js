@@ -7,6 +7,45 @@ var profileSchema = new mongoose.Schema({
     branch: {
         type: String,
         required: true,
+        enum: [
+            'All',
+            'Aberdeen',
+            'Belfast',
+            'Birmingham',
+            'Bournemouth',
+            'Bradford',
+            'Brighton',
+            'Bristol',
+            'Cambridge',
+            'Canterbury',
+            'Coventry',
+            'Cranfield',
+            'Durham',
+            'Edinburgh',
+            'Exeter',
+            'Glasgow',
+            'Hatfield',
+            'Hull',
+            'Lancaster',
+            'Leeds',
+            'Leicester',
+            'Liverpool',
+            'London',
+            'Manchester',
+            'Newcastle',
+            'Northampton',
+            'Norwich',
+            'Nottingham',
+            'Oxford',
+            'Portsmouth',
+            'Reading',
+            'Sheffield',
+            'Southampton',
+            'Sunderland',
+            'Wales',
+            'Warwick',
+            'York',
+        ],
     },
     fullName: {
         type: String,
@@ -92,8 +131,25 @@ var profileSchema = new mongoose.Schema({
     roles: {
         type: [String],
         default: ['basic'],
-        enum: ['basic', 'verified', 'verifier', 'dataAccess', 'voteOrganiser'],
+        enum: [
+            'basic',
+            'verified',
+            'verifier',
+            'dataAccess',
+            'voteOrganiser',
+            'mvpAwardsAccess',
+        ],
     },
+});
+
+profileSchema.pre('findOneAndUpdate', function (next) {
+    this.options.runValidators = true;
+    next();
+});
+
+profileSchema.pre('update', function (next) {
+    this.options.runValidators = true;
+    next();
 });
 
 const saltRounds = 10;
