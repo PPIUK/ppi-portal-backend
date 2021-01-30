@@ -575,6 +575,12 @@ function getDefaultAggregateOptions(req) {
         $unset: ['password'],
     });
 
+    aggregate_options.push({
+        $addFields: { '_id': {
+                '$toString': '$_id'
+            }},
+    })
+
     const aggregate = Profile.aggregate(aggregate_options);
 
     //Pagination
