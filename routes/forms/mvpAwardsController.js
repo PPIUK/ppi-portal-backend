@@ -180,7 +180,7 @@ exports.upsertSelf = [
                         replyTo: 'no-reply@example.com',
                         to: res.locals.oauth.token.user.email,
                         subject: 'PPI UK - MVP Awards',
-                        body: dedent`Terima kasih telah ikut serta dalam The MVP Awards. Aplikasi yang anda kirimkan telah kami terima. Pengumuman selanjutnya akan anda terima pada tanggal 7 Maret 2021
+                        text: dedent`Terima kasih telah ikut serta dalam The MVP Awards. Aplikasi yang anda kirimkan telah kami terima. Pengumuman selanjutnya akan anda terima pada tanggal 7 Maret 2021
 
                         Hormat Kami, 
                         
