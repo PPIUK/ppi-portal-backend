@@ -483,6 +483,10 @@ exports.search = {
             (err, profiles) => {
                 if (err) return res.status(500).json({ message: err.message });
 
+                profiles.forEach(profile =>
+                    profile._doc._id = profile._id.toString()
+                );
+
                 return res.status(200).json({
                     message: 'Name lookup successful',
                     data: profiles.map((profile) =>
