@@ -20,6 +20,11 @@ require('dotenv').config();
 
 const path = require('path');
 const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const privateKey = fs.readFileSync('dev.localhost.key', 'utf-8');
+const certificate  = fs.readFileSync('dev.localhost.crt', 'utf-8');
+const credentials = {key: privateKey, cert: certificate};
 const express = require('express');
 
 const mongoose = require('mongoose').set(
@@ -66,6 +71,10 @@ module.exports = new Promise((resolve, reject) => {
         .once('open', () => {
             let port = app.get('port');
             app.listen(port);
+            // var httpServer = http.createServer(app);
+            // var httpsServer = https.createServer(credentials, app);
+            // httpServer.listen(3002);
+            // httpsServer.listen(port);
             logger.info(`Server started on port: ${port}`);
             resolve(app);
         });
