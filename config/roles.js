@@ -56,6 +56,9 @@ const grants = {
         mvpAwardForm: {
             'read:any': ['*'],
         },
+        profile: {
+            'read:any': ['phoneWA', 'email', 'emailPersonal'],
+        },
     },
 };
 
