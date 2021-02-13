@@ -8,29 +8,6 @@ const RefreshToken = mongoose.model('RefreshToken');
 
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
-// exports.authorize = function (req, res, cbFunc) {
-//     // const {username, password} = req.body
-//     // if(username === 'username' && password === 'password') {
-//     //     req.body.user = {user: 1}
-//     //     return cbFunc(req, res)
-//     // }
-//     // res.redirect('http://localhost:3001/login')
-//     console.log('TEST AUTHORIZE')
-//     // console.log(req)
-//     const options = {
-//         authenticateHandler: {
-//             handle: (data) => {
-//                 console.log('INSIDE AUTHN HANDLER')
-//                 console.log(data);
-//                 console.log(Object.keys(req.body).map(k => ({name: k, value: req.body[k]})));
-//                 return {id: '5fad15dc74dd5218ec2ca635'};
-//             }
-//         }
-//     }
-//     cbFunc(req, res, options)
-// }
-
-
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
  */

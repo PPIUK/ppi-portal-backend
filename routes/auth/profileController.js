@@ -350,11 +350,10 @@ exports.viewSelf = function (req, res) {
                     message: err.message,
                 });
             }
-            profile._id = profile._id.toString();
+            profile._doc._id = profile._id.toString()
             return res.status(200).json({
                 message: 'Own profile details returned successfully',
-                // data: req.permission.filter(profile._doc),
-                data: profile
+                data: req.permission.filter(profile._doc),
             });
         }
     );

@@ -110,32 +110,9 @@ module.exports = (app) => {
         .route('/auth/reset-password/:token')
         .get(authController.allowResetPassword)
         .post(authController.resetPassword);
-    // router.route('/auth/authorize').post(authController.authorize, app.oauth.authorize());
-    router.post('/auth/authorize', (req,res,next) => {
-    //     DebugControl.log.flow('Initial User Authentication')
-    //     const {username, password} = req.body
-    //     if(username === 'username' && password === 'password') {
-    //         req.body.user = {user: 1}
-    //         return next()
-    //     }
-    //     const params = [ // Send params back down
-    //         'client_id',
-    //         'redirect_uri',
-    //         'response_type',
-    //         'grant_type',
-    //         'state',
-    //     ]
-    //         .map(a => `${a}=${req.body[a]}`)
-    //         .join('&')
-    //     return res.redirect(`/oauth?success=false&${params}`)
-    // }, (req,res, next) => { // sends us to our redirect with an authorization code in our url
-        console.log('Authorization')
-        return next()
-    }, app.oauth.authorize({
+    router.route('/auth/authorize').post(app.oauth.authorize({
         authenticateHandler: {
             handle: req => {
-                console.log('Authenticate Handler')
-                console.log(Object.keys(req.body).map(k => ({name: k, value: req.body[k]})))
                 return req.body.user
             }
         }

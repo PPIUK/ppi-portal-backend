@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const authorizationCodeSchema = new mongoose.Schema(
     {
         user: {
-            // FIXME: THIS IS THE ERROR FOR SAVING
             type: mongoose.Schema.Types.ObjectId,
             required: true,
             ref: 'Profile',
