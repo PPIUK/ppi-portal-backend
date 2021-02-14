@@ -110,6 +110,13 @@ module.exports = (app) => {
         .route('/auth/reset-password/:token')
         .get(authController.allowResetPassword)
         .post(authController.resetPassword);
+    router.route('/auth/authorize').post(app.oauth.authorize({
+        authenticateHandler: {
+            handle: req => {
+                return req.body.user
+            }
+        }
+    }))
 
     let mvpAwardsController = require('./forms/mvpAwardsController');
     router

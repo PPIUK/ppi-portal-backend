@@ -343,13 +343,14 @@ exports.delete = function (req, res) {
 exports.viewSelf = function (req, res) {
     Profile.findById(
         res.locals.oauth.token.user,
-        { password: 0 },
+        { password: 0, __v: 0 },
         function (err, profile) {
             if (err) {
                 return res.status(500).json({
                     message: err.message,
                 });
             }
+            profile._doc._id = profile._id.toString()
             return res.status(200).json({
                 message: 'Own profile details returned successfully',
                 data: req.permission.filter(profile._doc),
