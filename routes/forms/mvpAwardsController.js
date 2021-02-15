@@ -1,11 +1,5 @@
 const mongoose = require('mongoose');
 const dedent = require('dedent');
-const uploadHandler = new (require(global.appRoot +
-    '/config/middleware/uploadHandler'))({
-    minFileSize: 1,
-    maxFileSize: 5242880, // 5 mB
-    acceptFileTypes: /\.(pdf)$/i, // gif, jpg, jpeg, png
-});
 const fs = require('fs');
 
 const MvpAwardsForm = mongoose.model('MvpAwardsForm');
@@ -130,70 +124,8 @@ exports.viewSelf = function (req, res) {
  * @return res.body.message
  */
 exports.upsertSelf = [
-    uploadHandler.postHandler.bind(uploadHandler),
     function (req, res) {
-        MvpAwardsForm.findOne(
-            { user: res.locals.oauth.token.user },
-            async (err, form) => {
-                if (err) return res.status(500).json({ message: err.message });
-
-                if (req.files.files.length > 0) {
-                    let file = req.files.files[0];
-                    console.log(file.errors);
-                    if (file.errors.length > 0) return res.sendStatus(400);
-                    try {
-                        fs.renameSync(
-                            file.path,
-                            global.appRoot +
-                                `/uploads/mvp-awards/supporting/${res.locals.oauth.token.user._id}.pdf`
-                        );
-                        return res.sendStatus(200);
-                    } catch {
-                        return res.sendStatus(500);
-                    }
-                }
-
-                if (!form)
-                    form = new MvpAwardsForm({
-                        user: res.locals.oauth.token.user,
-                    });
-                else if (form.submitted)
-                    return res.status(400).json({
-                        message: 'Form already submitted!',
-                    });
-
-                form.submitterType = req.body.submitterType;
-                form.nominatedUser =
-                    req.body.submitterType == 'Nominator'
-                        ? req.body.nominatedUser
-                        : res.locals.oauth.token.user;
-                form.areaOfStudy = req.body.areaOfStudy;
-                form.awardTypes = req.body.awardTypes;
-                form.awardIndicators = req.body.awardIndicators;
-                form.statement = req.body.statement;
-                form.submitted = req.body.submitted;
-
-                if (req.body.submitted)
-                    mailTransporter.sendMail({
-                        from:
-                            'PPI UK Friendly Bot <ppiunitedkingdom@gmail.com>',
-                        replyTo: 'no-reply@example.com',
-                        to: res.locals.oauth.token.user.email,
-                        subject: 'PPI UK - MVP Awards',
-                        text: dedent`Terima kasih telah ikut serta dalam The MVP Awards. Aplikasi yang anda kirimkan telah kami terima. Pengumuman selanjutnya akan anda terima pada tanggal 7 Maret 2021
-
-                        Hormat Kami, 
-                        
-                        Tim The MVP Awards, PPI UK`,
-                    });
-
-                form.save()
-                    .then(() => res.status(200).json({ message: 'Form saved' }))
-                    .catch((err) =>
-                        res.status(500).json({ message: err.message })
-                    );
-            }
-        );
+        return res.sendStatus(400);
     },
 ];
 
