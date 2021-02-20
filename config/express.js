@@ -28,9 +28,13 @@ module.exports = function (app, logger) {
     // setup mongo sanitizer
     app.use(mongoSanitize());
 
-    app.options('*', cors());
+    // app.options('*', cors());
+    const corsOptions = {
+        origin: ['http://localhost:3001', 'portal.ppiuk.org'],
+        credentials: true,
+    }
     // allow CORS
-    app.use(cors());
+    app.use(cors(corsOptions));
 
     // debug logging
     app.use((req, res, next) => {
