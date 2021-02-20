@@ -28,6 +28,7 @@ module.exports = function (app, logger) {
     // setup mongo sanitizer
     app.use(mongoSanitize());
 
+    app.options('*', cors());
     // allow CORS
     app.use(cors());
 
