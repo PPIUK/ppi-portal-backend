@@ -57,7 +57,13 @@ const grants = {
             'read:any': ['*'],
         },
         profile: {
-            'read:any': ['phoneWA', 'email', 'emailPersonal', 'addressUK'],
+            'read:any': [
+                'phoneWA',
+                'email',
+                'emailPersonal',
+                'addressUK',
+                'postcodeUK',
+            ],
         },
     },
 };
