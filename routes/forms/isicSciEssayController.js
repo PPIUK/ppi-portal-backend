@@ -181,7 +181,7 @@ exports.new =
                 if (req.body.abstractSubmitted) {
                     mailTransporter.sendMail({
                         from:
-                            'PPI UK Friendly Bot <ppiunitedkingdom@gmail.com>',
+                            'PPI UK Portal Mailer <ppiunitedkingdom@gmail.com>',
                         replyTo: 'no-reply@example.com',
                         to: req.body.emailAddressMain,
                         subject: 'ISIC x SCI 2021 Essay Competition',
