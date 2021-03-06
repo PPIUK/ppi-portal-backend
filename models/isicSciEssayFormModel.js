@@ -16,7 +16,7 @@ const isicSciEssayFormSchema = new mongoose.Schema(
             required: true,
             enum: ['Individual', 'Collaboration']
         },
-        userName1: {
+        name1: {
             type: String,
             required: true,
         },
@@ -36,7 +36,7 @@ const isicSciEssayFormSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        userName2: {
+        name2: {
             type: String,
             required: false,
         },
@@ -64,6 +64,10 @@ const isicSciEssayFormSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        abstractSubmitted: {
+            type: Boolean,
+            default: false,
+        }
     },
     { timestamps: true }
 );
