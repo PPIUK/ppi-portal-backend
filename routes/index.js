@@ -143,6 +143,13 @@ module.exports = (app) => {
     router.route('/forms/isicsciessay/:id/abstract').post(isicSciEssayController.uploadAbstract)
     router.route('/forms/isicsciessay/:id/studentID/:no').post(isicSciEssayController.uploadStudentID)
     router.route('/forms/isicsciessay/:id/ktp/:no').post(isicSciEssayController.uploadKTP)
+
+    // router.route('/forms/isicsciessay/submissions/all')
+    //     .get(
+    //         app.oauth.authenticate(),
+    //         isicSciEssayController.grantAccess('readAny'),
+    //         isicSciEssayController.index
+    //     );
     // Export API routes
     return router;
 };
