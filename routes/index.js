@@ -138,6 +138,8 @@ module.exports = (app) => {
         .get(app.oauth.authenticate(), mvpAwardsController.viewSelf)
         .post(app.oauth.authenticate(), mvpAwardsController.upsertSelf);
 
+    let isicSciEssayController = require('./forms/isicSciEssayController');
+    router.route('/forms/isicsciessay/submit').post(isicSciEssayController.new);
     // Export API routes
     return router;
 };
