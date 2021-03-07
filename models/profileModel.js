@@ -138,6 +138,7 @@ var profileSchema = new mongoose.Schema({
             'dataAccess',
             'voteOrganiser',
             'mvpAwardsAccess',
+            'isicSciEssayAccess',
         ],
     },
 });

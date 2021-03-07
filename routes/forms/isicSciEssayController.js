@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const dedent = require('dedent');
-const path = require("path");
+const path = require('path');
+const AdmZip = require('adm-zip');
 const uploadHandler = new (require(global.appRoot +
     '/config/middleware/uploadHandler'))({
     minFileSize: 1,
@@ -17,15 +18,15 @@ const mailTransporter = require(global.appRoot + '/config/nodemailer');
 const ac = require(global.appRoot + '/config/roles');
 
 /**
- * Retrieves the names and IDs of all form submitters
+ * Retrieves all submissions
  * @name GET_/api/forms/isicsciessay/submissions/all
- * @return res.statusCode 200 if forms successfully
+ * @return res.statusCode 200 if forms successfully returned
  * @return res.statusCode 500 if error
  * @return res.body.message
- * @return res.body.data an array of {_id: ,fullName: } of the form submitters
+ * @return res.body.data an array of submissions
  */
 exports.index = function (req, res) {
-    IsicSciEssayForm.find({}, function (err, forms) {
+    IsicSciEssayForm.find({}, {__v: 0, createdAt: 0, updatedAt: 0}, function (err, forms) {
         if (err) {
             return res.status(500).json({
                 message: err.message,
@@ -40,7 +41,57 @@ exports.index = function (req, res) {
     });
 };
 
+/**
+ * Retrieves a zip file of all abstract files
+ * @name GET_/api/forms/isicsciessay/abstracts/all
+ * @return res.statusCode 200 if abstract successfully returned
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data
+ */
+exports.allAbstracts = function (req, res) {
+    const file = new AdmZip();
+    file.addLocalFolder(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts'));
+    file.writeZip(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip'));
 
+    if (fs.existsSync(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip'))) {
+        res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename=abstracts.zip`,
+            'Content-Transfer-Encoding': 'binary',
+        });
+        return res.end(
+            fs.readFileSync(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip')
+            )
+        );
+    } else return res.status(404);
+}
+
+/**
+ * Retrieves the abstract file of a submission
+ * @name GET_/api/forms/isicsciessay/:id/abstract
+ * @return res.statusCode 200 if abstract successfully returned
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data
+ */
+exports.viewAbstract = function (req, res) {
+    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/abstracts')
+                  .filter(fn => fn.includes(req.params.id))
+    if (files.length === 1) {
+        res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename=${files[0]}`,
+            'Content-Transfer-Encoding': 'binary',
+        });
+        return res.end(
+            fs.readFileSync(
+                global.appRoot +
+                path.join('/uploads', '/isic-sci', '/abstracts', files[0])
+            )
+        );
+    } else return res.status(404);
+}
 
 /**
  * Uploads ISIC SCI Essay abstract
@@ -84,8 +135,60 @@ exports.uploadAbstract = [
 ]
 
 /**
+ * Retrieves a zip file of all ID files
+ * @name GET_/api/forms/isicsciessay/IDs/all
+ * @return res.statusCode 200 if all IDs successfully returned
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data
+ */
+exports.allIds = function (req, res) {
+    const file = new AdmZip();
+    file.addLocalFolder(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs'));
+    file.writeZip(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip'));
+
+    if (fs.existsSync(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip'))) {
+        res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename=IDs.zip`,
+            'Content-Transfer-Encoding': 'binary',
+        });
+        return res.end(
+            fs.readFileSync(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip')
+            )
+        );
+    } else return res.status(404);
+}
+
+/**
+ * Retrieves the student ID file of a submission
+ * @name GET_/api/forms/isicsciessay/:id/studentID/:no
+ * @return res.statusCode 200 if student ID file successfully returned
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data
+ */
+exports.viewStudentId = function (req, res) {
+    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
+        .filter(fn => fn.includes(req.params.id + '_StudentID_' + req.params.no));
+    if (files.length === 1) {
+        res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename=${files[0]}`,
+            'Content-Transfer-Encoding': 'binary',
+        });
+        return res.end(
+            fs.readFileSync(
+                global.appRoot +
+                path.join('/uploads', '/isic-sci', '/IDs', files[0])
+            )
+        );
+    } else return res.status(404);
+}
+
+/**
  * Uploads ISIC SCI Essay participant Student ID
- * @name POST_/api/forms/isicsciessay/:submissionId/studentID/:no
+ * @name POST_/api/forms/isicsciessay/:id/studentID/:no
  * @param req.body student id file
  * @param req.params.id submission id
  * @param req.params.no author no (1 or 2)
@@ -117,8 +220,34 @@ exports.uploadStudentID = [
 ]
 
 /**
+ * Retrieves the KTP/Passport file of a submission
+ * @name GET_/api/forms/isicsciessay/:id/ktp/:no
+ * @return res.statusCode 200 if KTP file successfully returned
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ * @return res.body.data
+ */
+exports.viewKtp = function (req, res) {
+    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
+        .filter(fn => fn.includes(req.params.id + '_KTP_Passport_' + req.params.no));
+    if (files.length === 1) {
+        res.writeHead(200, {
+            'Content-Type': 'application/octet-stream',
+            'Content-Disposition': `attachment; filename=${files[0]}`,
+            'Content-Transfer-Encoding': 'binary',
+        });
+        return res.end(
+            fs.readFileSync(
+                global.appRoot +
+                path.join('/uploads', '/isic-sci', '/IDs', files[0])
+            )
+        );
+    } else return res.status(404);
+}
+
+/**
  * Uploads ISIC SCI Essay participant KTP/Passport
- * @name POST_/api/forms/isicsciessay/:submissionId/ktp/:no
+ * @name POST_/api/forms/isicsciessay/:id/ktp/:no
  * @param req.body ktp/passport file
  * @param req.params.id submission id
  * @param req.params.no author no (1 or 2)

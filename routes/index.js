@@ -140,16 +140,52 @@ module.exports = (app) => {
 
     let isicSciEssayController = require('./forms/isicSciEssayController');
     router.route('/forms/isicsciessay/submit').post(isicSciEssayController.new);
-    router.route('/forms/isicsciessay/:id/abstract').post(isicSciEssayController.uploadAbstract)
-    router.route('/forms/isicsciessay/:id/studentID/:no').post(isicSciEssayController.uploadStudentID)
-    router.route('/forms/isicsciessay/:id/ktp/:no').post(isicSciEssayController.uploadKTP)
+    router
+        .route('/forms/isicsciessay/:id/abstract')
+        .post(isicSciEssayController.uploadAbstract)
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.viewAbstract
+        );
+    router
+        .route('/forms/isicsciessay/:id/studentID/:no')
+        .post(isicSciEssayController.uploadStudentID)
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.viewStudentId
+        );
+    router
+        .route('/forms/isicsciessay/:id/ktp/:no')
+        .post(isicSciEssayController.uploadKTP)
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.viewKtp
+        );
 
-    // router.route('/forms/isicsciessay/submissions/all')
-    //     .get(
-    //         app.oauth.authenticate(),
-    //         isicSciEssayController.grantAccess('readAny'),
-    //         isicSciEssayController.index
-    //     );
+    router
+        .route('/forms/isicsciessay/submissions/all')
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.index
+        );
+    router
+        .route('/forms/isicsciessay/abstracts/all')
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.allAbstracts
+        )
+    router
+        .route('/forms/isicsciessay/IDs/all')
+        .get(
+            app.oauth.authenticate(),
+            isicSciEssayController.grantAccess('readAny'),
+            isicSciEssayController.allIds
+        )
     // Export API routes
     return router;
 };

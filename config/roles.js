@@ -66,6 +66,12 @@ const grants = {
             ],
         },
     },
+
+    isicSciEssayAccess: {
+        isicSciEssayForm: {
+            'read:any': ['*'],
+        }
+    }
 };
 
 const ac = new AccessControl(grants);
