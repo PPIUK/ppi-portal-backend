@@ -4,12 +4,13 @@ const path = require('path');
 const AdmZip = require('adm-zip');
 const uploadHandler = new (require(global.appRoot +
     '/config/middleware/uploadHandler'))({
-    minFileSize: 1,
+    minFileSize: 0,
     maxFileSize: 10485760, // 10 mB
     acceptFileTypes: /\.(doc|docx|gif|jpe?g|png)$/i, // gif, jpg, jpeg, png
 });
 
 const fs = require('fs');
+const sanitize = require('sanitize-filename');
 
 const IsicSciEssayForm = mongoose.model('IsicSciEssayForm');
 
@@ -118,7 +119,9 @@ exports.uploadAbstract = [
                 let file = req.files.files[0];
                 if (file.errors.length > 0) return res.status(400).json({ message: file.errors[0].message });
                 try {
-                    const filename = ['/', form.topic, '_', form.title.split(' ').join('_'), '_', req.params.id, path.extname(file.path)].join('')
+                    const filename = sanitize(
+                        ['/', form.topic, '_', form.title.split(' ').join('_'), '_', req.params.id, path.extname(file.path)]
+                            .join(''))
                     fs.renameSync(
                         file.path,
                         global.appRoot +

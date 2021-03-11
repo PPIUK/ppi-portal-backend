@@ -5,7 +5,7 @@ var uploadHandler = function (opts) {
         opts = {};
     }
     this.multiparty = opts.multiparty;
-    this.minFileSize = opts.minFileSize || 204800;
+    this.minFileSize = opts.minFileSize; // || 204800;
     this.maxFileSize = opts.maxFileSize || 5242880;
     this.acceptFileTypes = opts.acceptFileTypes || /\.(gif|jpe?g|png)$/i;
     return this;
