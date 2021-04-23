@@ -71,6 +71,15 @@ const grants = {
         isicSciEssayForm: {
             'read:any': ['*'],
         }
+    },
+
+    thesisAdmin: {
+        thesis: {
+            'read:any': ['*'],
+            'create:any': ['*'],
+            'update:any': ['*'],
+            'delete:any': ['*'],
+        }
     }
 };
 
