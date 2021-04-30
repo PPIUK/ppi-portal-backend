@@ -132,7 +132,13 @@ async function processThesis(req, thesis) {
  */
 exports.update =  function (req, res) {
     thesisUpload(req, res, async function (err) {
-        console.log(req.body);
+        if (!req.body.authors.includes(String(res.locals.oauth.token.user._id)) &&
+            !res.locals.oauth.token.user.roles.includes('thesisAdmin')) {
+            return res.status(403).json({
+                message: 'You are trying to update thesis that you did not contribute in!'
+            })
+        }
+
         if (err) {
             return res.status(err.code).json({
                 message: err.field

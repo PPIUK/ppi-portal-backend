@@ -136,7 +136,6 @@ module.exports = (app) => {
         )
         .put(
             app.oauth.authenticate(),
-            thesisController.grantAccess('updateAny'),
             thesisController.update
         );
 
