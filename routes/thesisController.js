@@ -50,6 +50,14 @@ const thesisUpload = multer({
  */
 exports.new =  function (req, res) {
     thesisUpload(req, res, async function (err) {
+        // FIXME: Decide on behaviour (who is allowed to submit whose)
+        // if (!req.body.authors.includes(String(res.locals.oauth.token.user._id)) &&
+        //     !res.locals.oauth.token.user.roles.includes('thesisAdmin')) {
+        //     return res.status(403).json({
+        //         message: 'You are trying to submit thesis that you did not contribute in!'
+        //     })
+        // }
+
         if (err) {
             return res.status(err.code).json({
                 message: err.field
@@ -62,35 +70,7 @@ exports.new =  function (req, res) {
         }
 
         let thesis = new Thesis(req.body);
-        if (req.file) {
-            thesis.fileId = mongoose.Types.ObjectId(req.file.id);
-            thesis.originalFileName = req.file.originalname;
-        }
-
-        try {
-            await Profile.findById(thesis.correspondingAuthor, { _id: 1}, (err, profile) => {
-                if (profile === null || (err && err.name === 'CastError')) {
-                    thesis.correspondingAuthor = req.body.correspondingAuthor;
-                } else {
-                    thesis.correspondingAuthor = mongoose.Types.ObjectId(profile._id);
-                }
-            });
-        } catch {}
-
-        let authors = []
-        for (const author of thesis.authors) {
-            try {
-                await Profile.findById(author, { _id: 1}, (err, profile) => {
-                    if ((err && err.name === 'CastError') || profile === null) {
-                        authors.push(author);
-                    } else {
-                        authors.push(profile._id)
-                    }
-                });
-            } catch {}
-        }
-        thesis.authors = authors;
-
+        thesis = await processThesis(req, thesis);
         thesis.save(function (err) {
             if (err) {
                 return res.status(400).json({
@@ -107,31 +87,83 @@ exports.new =  function (req, res) {
     })
 }
 
+async function processThesis(req, thesis) {
+    if (req.file) {
+        thesis.fileId = mongoose.Types.ObjectId(req.file.id);
+        thesis.originalFileName = req.file.originalname;
+    }
+
+    try {
+        await Profile.findById(thesis.correspondingAuthor, { _id: 1}, (err, profile) => {
+            if (profile === null || (err && err.name === 'CastError')) {
+                thesis.correspondingAuthor = req.body.correspondingAuthor;
+            } else {
+                thesis.correspondingAuthor = mongoose.Types.ObjectId(profile._id);
+            }
+        });
+    } catch {}
+
+    let authors = []
+    for (const author of thesis.authors) {
+        try {
+            await Profile.findById(author, { _id: 1}, (err, profile) => {
+                if ((err && err.name === 'CastError') || profile === null) {
+                    authors.push(author);
+                } else {
+                    authors.push(profile._id)
+                }
+            });
+        } catch {}
+    }
+    thesis.authors = authors;
+
+    return thesis;
+}
+
 /**
- * Submits a thesis and uploads the pdf file, if it was provided.
- * Unlike the `new` function, this function checks whether the submitter is an author in the submitted thesis or not.
- * If not, the submission is rejected, unless the submitter has the thesisAdmin role.
- *
+ * Updates a thesis and uploads the pdf file, if it was provided.
  * The authors and correspondingAuthor fields can contain a profile ID string,
  * indicating that the author is a registered member of PPI UK.
+ * This can only be done by thesisAdmin role.
  * @param req.body.authors is an array
  * @param req.body.correspondingAuthor is a string that needs to be in the authors array
  * @param req.body.file is an optional pdf file
- *
- * @return res.status.403 if the submitter is trying to submit thesis that they didn't write,
- * or if the submitter is not thesisAdmin
  * @return res.body.id is the thesis submission id.
  */
-exports.newRestricted = function (req, res) {
-    if (res.locals.oauth.token.user.roles.includes('thesisAdmin')) {
-        return exports.new (req, res);
-    } else if (req.body.authors.includes(String(res.locals.oauth.token.user._id))) {
-        return exports.new (req, res);
-    } else {
-        return res.status(403).json({
-            message: 'You are trying to submit thesis that you did not contribute in!'
+exports.update =  function (req, res) {
+    thesisUpload(req, res, async function (err) {
+        console.log(req.body);
+        if (err) {
+            return res.status(err.code).json({
+                message: err.field
+            })
+        }
+        if (!req.body.authors.includes(req.body.correspondingAuthor)) {
+            return res.status(400).json({
+                message: 'Corresponding Author is not included in the list of authors!'
+            });
+        }
+
+        Thesis.findById(req.params.id,  async function (err, thesis) {
+            thesis.set(req.body);
+            thesis = await processThesis(req, thesis)
+            thesis.save(function (err) {
+                if (err) {
+                    return res.status(400).json({
+                        message: err.message,
+                    });
+                }
+                return res
+                    .status(200)
+                    .json({
+                        message: 'Thesis updated!',
+                        id: thesis._id,
+                    });
+            })
+
         })
-    }
+
+    })
 }
 
 /**

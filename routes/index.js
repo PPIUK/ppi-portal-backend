@@ -118,12 +118,13 @@ module.exports = (app) => {
 
     let thesisController = require('./thesisController');
     router
-        .route('/thesis/:user_id') // FIXME: Do we need user_id path param?
+        .route('/thesis')
+        // .route('/thesis/:user_id') // FIXME: Do we need user_id path param?
         .post(
             app.oauth.authenticate(),
-            // thesisController.new // FIXME: Decide on behaviour (who is allowed to submit whose)
-            thesisController.newRestricted
-        );
+            thesisController.new
+        )
+
     router.route('/thesis/:id/pdf').get(thesisController.viewFile);
     router
         .route('/thesis/:id')
@@ -132,6 +133,11 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             thesisController.grantAccess('deleteAny'),
             thesisController.delete
+        )
+        .put(
+            app.oauth.authenticate(),
+            thesisController.grantAccess('updateAny'),
+            thesisController.update
         );
 
     let mvpAwardsController = require('./forms/mvpAwardsController');
