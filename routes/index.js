@@ -1,7 +1,5 @@
 // Filename: api-routes.js
 
-const { get } = require('mongoose');
-
 module.exports = (app) => {
     // Initialize express router
     let router = require('express').Router();
@@ -117,6 +115,29 @@ module.exports = (app) => {
             }
         }
     }))
+
+    let thesisController = require('./thesisController');
+    router
+        .route('/thesis')
+        // .route('/thesis/:user_id') // FIXME: Do we need user_id path param?
+        .post(
+            app.oauth.authenticate(),
+            thesisController.new
+        )
+
+    router.route('/thesis/:id/pdf').get(thesisController.viewFile);
+    router
+        .route('/thesis/:id')
+        .get(thesisController.view)
+        .delete(
+            app.oauth.authenticate(),
+            thesisController.grantAccess('deleteAny'),
+            thesisController.delete
+        )
+        .put(
+            app.oauth.authenticate(),
+            thesisController.update
+        );
 
     let mvpAwardsController = require('./forms/mvpAwardsController');
     router
