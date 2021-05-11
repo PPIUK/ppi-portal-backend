@@ -3,6 +3,7 @@ const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
 const crypto = require('crypto');
 const path = require('path');
+const AccessControl = require('accesscontrol');
 
 const Thesis = mongoose.model('Thesis');
 const Profile = mongoose.model('Profile');
@@ -75,7 +76,11 @@ exports.new = function (req, res) {
             });
         }
 
-        let thesis = new Thesis({ ...req.body, authors: authors });
+        let thesis = new Thesis({
+            ...req.body,
+            authors: authors,
+            uploadedBy: req.user._id,
+        });
         thesis = await processThesis(req, thesis);
         thesis.save(function (err) {
             if (err) {
@@ -254,6 +259,54 @@ exports.view = function (req, res) {
             });
         }
     });
+};
+
+/**
+ * Searches the thesis bank
+ * This endpoint is public.
+ * @return theses Array of search result
+ */
+exports.search = function (req, res) {
+    let query = Thesis.find({});
+
+    // count on sanitizer to remove bad values
+    for (let [k, v] of Object.entries(req.params)) query.where(k).equals(v);
+
+    query
+        .exec()
+        .then(async (data) => {
+            console.log('here');
+            for (let thesis of data) {
+                try {
+                    let profile = await Profile.findById(
+                        thesis.correspondingAuthor,
+                        { _id: 1, fullName: 1 }
+                    );
+
+                    if (profile !== null)
+                        thesis.correspondingAuthor = {
+                            id: profile._id,
+                            name: profile.fullName,
+                        };
+                } catch {
+                    // ok
+                }
+            }
+            res.json({
+                message: 'Results returned',
+                theses: data.map((thesis) =>
+                    AccessControl.filter(thesis.toObject(), [
+                        '_id',
+                        'itemType',
+                        'title',
+                        'correspondingAuthor',
+                    ])
+                ),
+            });
+        })
+        .catch(() => {
+            res.status(500);
+        });
 };
 
 /**

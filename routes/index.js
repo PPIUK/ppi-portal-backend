@@ -1,5 +1,7 @@
 // Filename: api-routes.js
 
+const { get } = require('mongoose');
+
 module.exports = (app) => {
     // Initialize express router
     let router = require('express').Router();
@@ -124,6 +126,7 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             thesisController.new
         )
+        .get(thesisController.search)
 
     router.route('/thesis/:id/pdf').get(thesisController.viewFile);
     router
