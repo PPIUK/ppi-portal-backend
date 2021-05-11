@@ -270,7 +270,7 @@ exports.search = function (req, res) {
     let query = Thesis.find({});
 
     // count on sanitizer to remove bad values
-    for (let [k, v] of Object.entries(req.params)) query.where(k).equals(v);
+    for (let [k, v] of Object.entries(req.query)) query.where(k).equals(v);
 
     query
         .exec()
