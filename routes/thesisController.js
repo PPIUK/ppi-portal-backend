@@ -79,7 +79,7 @@ exports.new = function (req, res) {
         let thesis = new Thesis({
             ...req.body,
             authors: authors,
-            uploadedBy: req.user._id,
+            uploadedBy: res.locals.oauth.token.user._id,
         });
         thesis = await processThesis(req, thesis);
         thesis.save(function (err) {
