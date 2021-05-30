@@ -1,7 +1,5 @@
 // Filename: api-routes.js
 
-const { get } = require('mongoose');
-
 module.exports = (app) => {
     // Initialize express router
     let router = require('express').Router();
@@ -110,23 +108,22 @@ module.exports = (app) => {
         .route('/auth/reset-password/:token')
         .get(authController.allowResetPassword)
         .post(authController.resetPassword);
-    router.route('/auth/authorize').post(app.oauth.authorize({
-        authenticateHandler: {
-            handle: req => {
-                return req.body.user
-            }
-        }
-    }))
+    router.route('/auth/authorize').post(
+        app.oauth.authorize({
+            authenticateHandler: {
+                handle: (req) => {
+                    return req.body.user;
+                },
+            },
+        })
+    );
 
     let thesisController = require('./thesisController');
     router
         .route('/thesis')
         // .route('/thesis/:user_id') // FIXME: Do we need user_id path param?
-        .post(
-            app.oauth.authenticate(),
-            thesisController.new
-        )
-        .get(thesisController.search)
+        .post(app.oauth.authenticate(), thesisController.new)
+        .get(thesisController.search);
 
     router.route('/thesis/:id/pdf').get(thesisController.viewFile);
     router
@@ -137,10 +134,7 @@ module.exports = (app) => {
             thesisController.grantAccess('deleteAny'),
             thesisController.delete
         )
-        .put(
-            app.oauth.authenticate(),
-            thesisController.update
-        );
+        .put(app.oauth.authenticate(), thesisController.update);
 
     let mvpAwardsController = require('./forms/mvpAwardsController');
     router
@@ -202,14 +196,14 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             isicSciEssayController.grantAccess('readAny'),
             isicSciEssayController.allAbstracts
-        )
+        );
     router
         .route('/forms/isicsciessay/IDs/all')
         .get(
             app.oauth.authenticate(),
             isicSciEssayController.grantAccess('readAny'),
             isicSciEssayController.allIds
-        )
+        );
     // Export API routes
     return router;
 };

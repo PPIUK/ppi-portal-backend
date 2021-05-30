@@ -116,6 +116,7 @@ async function processThesis(req, thesis) {
                 }
             }
         );
+        // eslint-disable-next-line no-empty
     } catch {}
 
     let authors = [];
@@ -128,6 +129,7 @@ async function processThesis(req, thesis) {
                     authors.push(profile._id);
                 }
             });
+            // eslint-disable-next-line no-empty
         } catch {}
     }
     thesis.authors = authors;
@@ -275,7 +277,6 @@ exports.search = function (req, res) {
     query
         .exec()
         .then(async (data) => {
-            console.log('here');
             for (let thesis of data) {
                 try {
                     let profile = await Profile.findById(
@@ -299,7 +300,11 @@ exports.search = function (req, res) {
                         '_id',
                         'itemType',
                         'title',
+                        'year',
                         'correspondingAuthor',
+                        'authors',
+                        'university',
+                        'cluster',
                     ])
                 ),
             });
