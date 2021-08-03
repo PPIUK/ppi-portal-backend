@@ -96,6 +96,7 @@ exports.logout = function (req, res) {
     );
 };
 
+const allowedDomains = require('../../data/uniemails.json');
 exports.register = function (req, res) {
     Profile.findOne({ email: req.body.email }, function (err, profile) {
         if (err) {
@@ -103,6 +104,10 @@ exports.register = function (req, res) {
                 message: err.message,
             });
         }
+        if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+            return res.status(400).json({
+                message: 'Email is not allowed',
+            });
         if (profile !== null && profile.password !== undefined) {
             return res.status(409).json({
                 message:
@@ -144,7 +149,7 @@ exports.registerNew = function (req, res) {
         if (req.body.branch === 'All') {
             return res.status(400).json({
                 message: `Cannot set own branch to 'All'`,
-            })
+            });
         }
 
         let profile = new Profile({
