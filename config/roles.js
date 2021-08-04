@@ -50,6 +50,13 @@ const grants = {
             'delete:any': ['*'],
         },
     },
+    verifier: {
+        profile: {
+            'read:any': ['_id', 'fullName'],
+            'update:any': ['roles'],
+            'delete:any': ['*'],
+        }
+    }
 
     // grants for specific forms
     mvpAwardsAccess: {

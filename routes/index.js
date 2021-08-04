@@ -204,6 +204,34 @@ module.exports = (app) => {
             isicSciEssayController.grantAccess('readAny'),
             isicSciEssayController.allIds
         );
+
+    let verifierController = require('./verifierController.js');
+    router
+        .route('/verifier/pending')
+        .get(
+            app.oauth.authenticate(),
+            verifierController.grantAccess('readAny'),
+            verifierController.pending
+        )
+    router
+        .route('/verifier/flagged')
+        .get(
+            app.oauth.authenticate(),
+            verifierController.grantAccess('readAny'),
+            verifierController.flagged
+        )
+    router
+        .route('/verifier/action/:userID')
+        .post(
+            app.oauth.authenticate(),
+            verifierController.grantAccess('updateAny'),
+            verifierController.action
+        )
+        .delete(
+            app.oauth.authenticate(),
+            verifierController.grantAccess('deleteAny'),
+            verifierController.delete
+        )
     // Export API routes
     return router;
 };
