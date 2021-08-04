@@ -77,7 +77,10 @@ exports.grantAccess = function (action) {
         const permission = ac
             .can(res.locals.oauth.token.user.roles)
             [action]('profile');
-        if (!permission.granted) {
+        if (
+            !permission.granted ||
+            !res.locals.oauth.token.user.roles.includes('verifier')
+        ) {
             return res.status(403).json({
                 message: "You don't have enough privilege to do this action",
             });
