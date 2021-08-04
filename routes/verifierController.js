@@ -39,9 +39,44 @@ exports.flagged = function (req, res) {
     });
 };
 
-exports.action = function (req, res) {};
+exports.action = function (req, res) {
+    if (!['verified', 'flagged'].includes(req.body.action))
+        return res.status(400).json({
+            message: 'Invalid action',
+        });
 
-exports.delete = function (req, res) {};
+    Profile.findOne({ _id: req.params.userID })
+        .exec()
+        .then((err, profile) => {
+            if (err)
+                return res.status(500).json({
+                    message: 'Server error',
+                });
+            if (profile.roles.includes(req.body.action))
+                return res.sendStatus(201);
+            profile.roles.push(req.body.action);
+            profile
+                .save()
+                .then(() => res.sendStatus(201))
+                .catch(() => res.status(500).json({ message: 'Server erro' }));
+        });
+};
+
+exports.delete = function (req, res) {
+    Profile.findOne({ _id: req.params.userID })
+        .exec()
+        .then((err, profile) => {
+            if (err)
+                return res.status(500).json({
+                    message: 'Server error',
+                });
+            if (!profile.roles.includes('flagged'))
+                return res.status(400).json({
+                    message: 'Cannot delete, not flagged',
+                });
+            profile.remove().then(() => res.sendStatus(201));
+        });
+};
 
 /**
  * Find permission for the requested action and role
