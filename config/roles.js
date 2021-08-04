@@ -23,23 +23,6 @@ const grants = {
             ],
         },
     },
-    verifier: {
-        profile: {
-            'read:own': ['*', '!__v'],
-            'update:own': ['*', '!_id', '!__v'],
-            'read:any': [
-                '_id',
-                'fullName',
-                'university',
-                'degreeLevel',
-                'faculty',
-                'course',
-                'branch',
-                'roles',
-            ],
-            'update:any': ['roles'],
-        },
-    },
     dataAccess: {
         profile: {
             'read:own': ['*', '!__v'],
@@ -55,8 +38,9 @@ const grants = {
             'read:any': ['_id', 'fullName'],
             'update:any': ['roles'],
             'delete:any': ['*'],
-        }
-    }
+        },
+    },
+    flagged: {},
 
     // grants for specific forms
     mvpAwardsAccess: {
@@ -77,7 +61,7 @@ const grants = {
     isicSciEssayAccess: {
         isicSciEssayForm: {
             'read:any': ['*'],
-        }
+        },
     },
 
     thesisAdmin: {
@@ -86,8 +70,8 @@ const grants = {
             'create:any': ['*'],
             'update:any': ['*'],
             'delete:any': ['*'],
-        }
-    }
+        },
+    },
 };
 
 const ac = new AccessControl(grants);

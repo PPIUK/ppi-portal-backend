@@ -212,14 +212,14 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             verifierController.grantAccess('readAny'),
             verifierController.pending
-        )
+        );
     router
         .route('/verifier/flagged')
         .get(
             app.oauth.authenticate(),
             verifierController.grantAccess('readAny'),
             verifierController.flagged
-        )
+        );
     router
         .route('/verifier/action/:userID')
         .post(
@@ -231,7 +231,7 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             verifierController.grantAccess('deleteAny'),
             verifierController.delete
-        )
+        );
     // Export API routes
     return router;
 };

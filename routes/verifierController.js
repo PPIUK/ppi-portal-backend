@@ -7,36 +7,29 @@ exports.pending = function (req, res) {
     let query = Profile.find();
 
     // get all non verified users with the same branch as requestee
-    query.where('branch').equals(req.user.branch);
+    query.where('branch').equals(res.locals.oauth.token.user.branch);
     query.nin('roles', 'verified');
+    query.nin('roles', 'flagged');
 
-    query.exec().then((err, val) => {
-        if (err)
-            return res.status(500).json({
-                message: 'Server error',
-            });
-        return res.status(200).json({
+    query.exec().then((val) =>
+        res.status(200).json({
             profiles: val,
-        });
-    });
+        })
+    );
 };
 
 exports.flagged = function (req, res) {
     let query = Profile.find();
 
     // get all flagged users with the same branch as requestee
-    query.where('branch').equals(req.user.branch);
+    query.where('branch').equals(res.locals.oauth.token.user.branch);
     query.in('roles', 'flagged');
 
-    query.exec().then((err, val) => {
-        if (err)
-            return res.status(500).json({
-                message: 'Server error',
-            });
-        return res.status(200).json({
+    query.exec().then((val) =>
+        res.status(200).json({
             profiles: val,
-        });
-    });
+        })
+    );
 };
 
 exports.action = function (req, res) {
@@ -47,11 +40,7 @@ exports.action = function (req, res) {
 
     Profile.findOne({ _id: req.params.userID })
         .exec()
-        .then((err, profile) => {
-            if (err)
-                return res.status(500).json({
-                    message: 'Server error',
-                });
+        .then((profile) => {
             if (profile.roles.includes(req.body.action))
                 return res.sendStatus(201);
             profile.roles.push(req.body.action);
@@ -66,6 +55,7 @@ exports.delete = function (req, res) {
     Profile.findOne({ _id: req.params.userID })
         .exec()
         .then((err, profile) => {
+            console.error(err);
             if (err)
                 return res.status(500).json({
                     message: 'Server error',
