@@ -25,6 +25,7 @@ exports.flagged = function (req, res) {
     // get all flagged users with the same branch as requestee
     if (res.locals.oauth.token.user.branch !== 'All')
         query.where('branch').equals(res.locals.oauth.token.user.branch);
+    query.nin('roles', 'verified');
     query.in('roles', 'flagged');
 
     query.exec().then((val) =>
