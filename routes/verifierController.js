@@ -7,7 +7,8 @@ exports.pending = function (req, res) {
     let query = Profile.find();
 
     // get all non verified users with the same branch as requestee
-    query.where('branch').equals(res.locals.oauth.token.user.branch);
+    if (res.locals.oauth.token.user.branch !== 'All')
+        query.where('branch').equals(res.locals.oauth.token.user.branch);
     query.nin('roles', 'verified');
     query.nin('roles', 'flagged');
 
@@ -22,7 +23,8 @@ exports.flagged = function (req, res) {
     let query = Profile.find();
 
     // get all flagged users with the same branch as requestee
-    query.where('branch').equals(res.locals.oauth.token.user.branch);
+    if (res.locals.oauth.token.user.branch !== 'All')
+        query.where('branch').equals(res.locals.oauth.token.user.branch);
     query.in('roles', 'flagged');
 
     query.exec().then((val) =>
@@ -39,6 +41,12 @@ exports.action = function (req, res) {
         });
 
     Profile.findOne({ _id: req.params.userID })
+        .where('branch')
+        .equals(
+            res.locals.oauth.token.user.branch !== 'All'
+                ? res.locals.oauth.token.user.branch
+                : /.*/g
+        )
         .exec()
         .then((profile) => {
             if (profile.roles.includes(req.body.action))
@@ -53,6 +61,12 @@ exports.action = function (req, res) {
 
 exports.delete = function (req, res) {
     Profile.findOne({ _id: req.params.userID })
+        .where('branch')
+        .equals(
+            res.locals.oauth.token.user.branch !== 'All'
+                ? res.locals.oauth.token.user.branch
+                : /.*/g
+        )
         .exec()
         .then((err, profile) => {
             console.error(err);
