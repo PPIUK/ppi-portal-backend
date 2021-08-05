@@ -135,6 +135,7 @@ var profileSchema = new mongoose.Schema({
             'basic',
             'verified',
             'verifier',
+            'flagged',
             'dataAccess',
             'voteOrganiser',
             'mvpAwardsAccess',
