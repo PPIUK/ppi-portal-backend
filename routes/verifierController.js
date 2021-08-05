@@ -9,8 +9,7 @@ exports.pending = function (req, res) {
     // get all non verified users with the same branch as requestee
     if (res.locals.oauth.token.user.branch !== 'All')
         query.where('branch').equals(res.locals.oauth.token.user.branch);
-    query.nin('roles', 'verified');
-    query.nin('roles', 'flagged');
+    query.nin('roles', ['verified', 'flagged']);
 
     query.exec().then((val) =>
         res.status(200).json({
