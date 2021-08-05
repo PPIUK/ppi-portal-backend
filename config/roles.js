@@ -35,7 +35,7 @@ const grants = {
     },
     verifier: {
         profile: {
-            'read:any': ['_id', 'fullName'],
+            'read:any': ['*', '!__v', '!password'],
             'update:any': ['roles'],
             'delete:any': ['*'],
         },
