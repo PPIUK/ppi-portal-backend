@@ -27,6 +27,13 @@ exports.memberSummaryBranch = function (req, res) {
     });
 };
 
+exports.memberSummaryActive = function (req, res) {
+    Profile.find()
+        .where('endDate')
+        .gte(new Date())
+        .then((profiles) => res.json({ count: profiles.length }));
+};
+
 exports.memberSummaryUni = function (req, res) {
     Profile.aggregate([
         {

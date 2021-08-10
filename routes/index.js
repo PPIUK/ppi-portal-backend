@@ -89,6 +89,10 @@ module.exports = (app) => {
         .route('/public/members/branch')
         .get(publicController.memberSummaryBranch);
 
+    router
+        .route('/public/members/active')
+        .get(publicController.memberSummaryActive);
+
     var authController = require('./auth/authController');
     router.route('/auth/register').post(authController.register);
     router.route('/auth/register/new').post(authController.registerNew);
