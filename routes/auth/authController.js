@@ -4,7 +4,6 @@ const dedent = require('dedent');
 const Profile = mongoose.model('Profile');
 const Token = mongoose.model('VerificationToken');
 const AccessToken = mongoose.model('AccessToken');
-const RefreshToken = mongoose.model('RefreshToken');
 
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
@@ -141,6 +140,10 @@ exports.registerNew = function (req, res) {
                     'Email already registered. Please login /auth/login or set password /auth/set-password.',
             });
         }
+        if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+            return res.status(400).json({
+                message: 'Email is not allowed',
+            });
         if (!req.body.password) {
             return res.status(400).json({
                 message: 'Password required.',
