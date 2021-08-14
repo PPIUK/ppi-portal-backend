@@ -236,6 +236,28 @@ module.exports = (app) => {
             verifierController.grantAccess('deleteAny'),
             verifierController.delete
         );
+
+    let votingCampaignController = require('./votingController.js');
+    router
+        .route('/voting/admin')
+        .post(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('createAny'),
+            votingCampaignController.new
+        );
+    router
+        .route('/voting/admin/:campaignID')
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('updateAny'),
+            votingCampaignController.update
+        )
+        .delete(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('deleteAny'),
+            votingCampaignController.delete
+        )
+
     // Export API routes
     return router;
 };

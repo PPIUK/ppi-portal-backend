@@ -72,6 +72,15 @@ const grants = {
             'delete:any': ['*'],
         },
     },
+
+    voteOrganiser: {
+        votingCampaign: {
+            'read:any': ['*'],
+            'create:any': ['*'],
+            'update:any': ['*'],
+            'delete:any': ['*'],
+        },
+    },
 };
 
 const ac = new AccessControl(grants);
