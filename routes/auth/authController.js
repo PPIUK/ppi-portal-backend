@@ -7,6 +7,8 @@ const AccessToken = mongoose.model('AccessToken');
 
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
+const profileController = require('./profileController');
+
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
  */
@@ -128,49 +130,67 @@ exports.register = function (req, res) {
 };
 
 exports.registerNew = function (req, res) {
-    Profile.findOne({ email: req.body.email }, async function (err, _profile) {
+    profileController.studentProofUpload(req, res, async function (err) {
         if (err) {
-            return res.status(400).json({
-                message: err.message,
-            });
-        }
-        if (_profile) {
-            return res.status(409).json({
-                message:
-                    'Email already registered. Please login /auth/login or set password /auth/set-password.',
-            });
-        }
-        if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
-            return res.status(400).json({
-                message: 'Email is not allowed',
-            });
-        if (!req.body.password) {
-            return res.status(400).json({
-                message: 'Password required.',
-            });
-        }
-        if (req.body.branch === 'All') {
-            return res.status(400).json({
-                message: `Cannot set own branch to 'All'`,
+            return res.status(err.code).json({
+                message: err.field,
             });
         }
 
-        let profile = new Profile({
-            ...req.body,
-            emailVerified: false,
-            roles: ['basic'],
-        });
+        Profile.findOne(
+            { email: req.body.email },
+            async function (err, _profile) {
+                if (err) {
+                    return res.status(400).json({
+                        message: err.message,
+                    });
+                }
+                if (_profile) {
+                    return res.status(409).json({
+                        message:
+                            'Email already registered. Please login /auth/login or set password /auth/set-password.',
+                    });
+                }
+                if (
+                    req.body.email &&
+                    !allowedDomains.includes(req.body.email.match(/@(.*)/)[1])
+                )
+                    return res.status(400).json({
+                        message: 'Email is not allowed',
+                    });
+                if (!req.body.password) {
+                    return res.status(400).json({
+                        message: 'Password required.',
+                    });
+                }
+                if (req.body.branch === 'All') {
+                    return res.status(400).json({
+                        message: `Cannot set own branch to 'All'`,
+                    });
+                }
 
-        try {
-            await profile.setPassword(req.body.password);
-            await profile.save();
-        } catch (err) {
-            return res.status(500).json({
-                message: err.message,
-            });
-        }
+                if (req.file) {
+                    req.body.studentProof = mongoose.Types.ObjectId(req.file.id);
+                }
 
-        await sendVerificationEmail(profile, req, res);
+                let profile = new Profile({
+                    ...req.body,
+                    emailVerified: false,
+                    roles: ['basic'],
+                });
+
+                try {
+                    await profile.setPassword(req.body.password);
+                    await profile.save();
+                } catch (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+
+                await sendVerificationEmail(profile, req, res);
+            }
+        );
     });
 };
 

@@ -36,9 +36,13 @@ const studentProofStorage = new GridFsStorage({
     },
 });
 
+exports.studentProofStorage = studentProofStorage;
+
 const studentProofUpload = multer({
     storage: studentProofStorage,
 }).single('studentProofFile');
+
+exports.studentProofUpload = studentProofUpload;
 
 /**
  * Gets info of all users. Depending on the requester's role/privileges, the behaviour is different:
