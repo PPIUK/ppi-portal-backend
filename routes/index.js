@@ -53,6 +53,13 @@ module.exports = (app) => {
             profileController.updateSelf
         );
     router
+        .route('/profiles/me/studentproof')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readOwn'),
+            profileController.viewOwnStudentProofFile
+        );
+    router
         .route('/profiles/:profile_id')
         .get(
             app.oauth.authenticate(),
@@ -71,6 +78,13 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             profileController.grantAccess('deleteAny'),
             profileController.delete
+        );
+    router
+        .route('/profiles/:profile_id/studentproof')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readAny'),
+            profileController.viewStudentProofFile
         );
     router
         .route('/profiles/:profile_id/public')
