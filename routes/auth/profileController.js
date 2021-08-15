@@ -678,9 +678,7 @@ function sendStudentProofFile(profile, err, res) {
             message: err.message,
         });
     });
-    res.writeHead(200, {
-        'Content-Disposition': 'filename=' + profile.originalFileName,
-    });
+    res.writeHead(200);
     stream.pipe(res);
 }
 

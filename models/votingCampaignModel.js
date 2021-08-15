@@ -1,29 +1,38 @@
 const mongoose = require('mongoose');
 
-const candidateStatementSchema = new mongoose.Schema({
-    missionStatement: {
-        type: String,
-        required: true,
-    },
-    visionStatement: {
-        type: String,
-        required: true,
-    },
-});
-
 const votingCandidateSchema = new mongoose.Schema({
     candidateID: {
         type: mongoose.Schema.ObjectId,
         required: true,
     },
-    statement: {
-        type: candidateStatementSchema,
-        required: true,
+    cv: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
+    },
+    // studentProof: {
+    //     type: mongoose.Schema.ObjectId,
+    //     required: false,
+    // },
+    organisationExp: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
+    },
+    notInOfficeStatement: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
+    },
+    videoLink: {
+        type: String,
+        required: false,
+    },
+    motivationEssay: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
     },
     votes: {
-        type: Number,
+        type: [mongoose.Schema.ObjectId],
         required: true,
-        default: 0,
+        default: [],
     },
 });
 
@@ -65,10 +74,6 @@ const votingCampaignSchema = new mongoose.Schema({
         type: [votingCandidateSchema],
         default: [],
     },
-    voted: {
-        type: [mongoose.Schema.ObjectId],
-        default: [],
-    },
     public: {
         type: Boolean,
         required: true,
@@ -98,4 +103,5 @@ votingCampaignSchema.pre('validate', function (next) {
     next();
 });
 
+mongoose.model('VotingCandidate', votingCandidateSchema, 'votingcandidates');
 mongoose.model('VotingCampaign', votingCampaignSchema, 'votingcampaigns');

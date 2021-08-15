@@ -251,7 +251,7 @@ module.exports = (app) => {
             verifierController.delete
         );
 
-    let votingCampaignController = require('./votingController.js');
+    let votingCampaignController = require('./votingCampaignController.js');
     router
         .route('/voting/admin')
         .post(
@@ -270,8 +270,51 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             votingCampaignController.grantAccess('deleteAny'),
             votingCampaignController.delete
+        );
+    router
+        .route('/voting/:campaignID')
+        .get(app.oauth.authenticate(), votingCampaignController.view);
+    router
+        .route('/voting/:campaignID/banner')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewCampaignBanner
+        );
+    router
+        .route('/voting/:campaignID/submission')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewSelfNomination
         )
-
+        .post(app.oauth.authenticate(), votingCampaignController.newNomination)
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.updateNomination
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewNomination);
+    router
+        .route('/voting/:campaignID/submission/:userID/cv')
+        .get(app.oauth.authenticate(), votingCampaignController.viewCV);
+    router
+        .route('/voting/:campaignID/submission/:userID/organisationExp')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewOrganisationExp
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID/notInOfficeStatement')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewNotInOfficeStatement
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID/motivationEssay')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewMotivationEssay
+        );
     // Export API routes
     return router;
 };
