@@ -5,6 +5,7 @@ const crypto = require('crypto');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
 const VotingCampaign = mongoose.model('VotingCampaign');
+const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
 
 const campaignBannerStorage = new GridFsStorage({
@@ -661,7 +662,7 @@ function findCandidateAndSendFile(
     bucketName
 ) {
     if (err) {
-        return res.status(400).json({
+        return res.status(500).json({
             message: err.message,
         });
     }
@@ -753,6 +754,110 @@ exports.viewMotivationEssay = function (req, res) {
             );
         }
     );
+};
+
+/**
+ * Votes for the specified candidate in the specified campaign.
+ * @name GET_/api/voting/:campaignID/vote/:userID
+ * @param req.params.campaignID is the campaign ID of the banner
+ * @param req.params.userID is the candidate ID
+ */
+exports.vote = async function (req, res) {
+    try {
+        let voterId = String(res.locals.oauth.token.user._id);
+        let profile = await Profile.findById(voterId, {
+            roles: 1,
+            startDate: 1,
+            endDate: 1,
+            degreeLevel: 1,
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                message: 'Your profile is not found.',
+            });
+        }
+        if (!profile.roles.includes('verified')) {
+            return res.status(403).json({
+                message: 'Your profile is not verified.',
+            });
+        }
+
+        let campaign = await VotingCampaign.findById(req.params.campaignID);
+
+        if (!campaign) {
+            return res.status(404).json({
+                message: 'Campaign is not found',
+            });
+        }
+        let current = new Date();
+        if (current < new Date(campaign.voteStart)) {
+            return res.status(403).json({
+                message: 'The voting phase has not started.',
+            });
+        }
+        if (current > new Date(campaign.voteEnd)) {
+            return res.status(403).json({
+                message: 'The voting phase has ended.',
+            });
+        }
+        if (profile.endDate < campaign.voterCutOffEndDate) {
+            return res.status(403).json({
+                message:
+                    'You are not eligible to vote due to your course end date.',
+            });
+        }
+        if (
+            profile.degreeLevel === 'S2 (Masters)' && //TODO: fix S2 (Masters) string
+            campaign.voterMastersCutOffStartDate &&
+            profile.startDate < campaign.voterMastersCutOffStartDate
+        ) {
+            return res.status(403).json({
+                message:
+                    'You are not eligible to vote due to your course start date.',
+            });
+        }
+        let all_voters = [].concat.apply(
+            [],
+            campaign.candidates.map((cand) => {
+                return cand.votes;
+            })
+        );
+        if (all_voters.some((v) => v.toString() === voterId)) {
+            return res.status(400).json({
+                message: 'You have already voted in this campaign',
+            });
+        }
+        let candidate = campaign.candidates.find(
+            ({ candidateID }) => String(candidateID) === req.params.userID
+        );
+        let candidateIndex = campaign.candidates.findIndex(
+            ({ candidateID }) => String(candidateID) === req.params.userID
+        );
+        if (!candidate) {
+            return res.status(404).json({
+                message: 'Candidate ID not found in this campaign.',
+            });
+        }
+        if (candidate.votes.includes(voterId)) {
+            return res.status(400).json({
+                message: 'You have already voted in this campaign',
+            });
+        }
+        candidate.votes.push(mongoose.Types.ObjectId(voterId));
+        campaign.candidates[candidateIndex] = candidate;
+
+        let savedCampaign = await campaign.save();
+        if (savedCampaign) {
+            return res.status(200).json({
+                message: 'Voting successful.',
+            });
+        }
+    } catch (err) {
+        return res.status(500).json({
+            message: err.message,
+        });
+    }
 };
 
 /**

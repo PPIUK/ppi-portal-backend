@@ -315,6 +315,9 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             votingCampaignController.viewMotivationEssay
         );
+    router
+        .route('/voting/:campaignID/vote/:userID')
+        .post(app.oauth.authenticate(), votingCampaignController.vote);
     // Export API routes
     return router;
 };

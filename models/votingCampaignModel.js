@@ -54,6 +54,14 @@ const votingCampaignSchema = new mongoose.Schema({
         required: true,
         default: false,
     },
+    voterCutOffEndDate: {
+        type: Date,
+        required: true,
+    },
+    voterMastersCutOffStartDate: {
+        type: Date,
+        required: false,
+    },
     nominateStart: {
         type: Date,
         required: true,
