@@ -808,7 +808,9 @@ exports.vote = async function (req, res) {
             });
         }
         if (
-            profile.degreeLevel === 'S2 (Masters)' && //TODO: fix S2 (Masters) string
+            //TODO: how to decide if the Masters course is a 1 year course or not???
+            profile.degreeLevel.includes('S2') &&
+            !profile.degreeLevel.includes('S1') && //skipping integrated masters
             campaign.voterMastersCutOffStartDate &&
             profile.startDate < campaign.voterMastersCutOffStartDate
         ) {
