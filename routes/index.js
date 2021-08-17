@@ -60,6 +60,13 @@ module.exports = (app) => {
             profileController.viewOwnStudentProofFile
         );
     router
+        .route('/profiles/me/profilepicture')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readOwn'),
+            profileController.viewOwnProfilePictureFile
+        );
+    router
         .route('/profiles/:profile_id')
         .get(
             app.oauth.authenticate(),
@@ -85,6 +92,13 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             profileController.grantAccess('readAny'),
             profileController.viewStudentProofFile
+        );
+    router
+        .route('/profiles/:profile_id/profilepicture')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readAny'),
+            profileController.viewProfilePictureFile
         );
     router
         .route('/profiles/:profile_id/public')

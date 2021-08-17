@@ -1,28 +1,24 @@
 const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
-const crypto = require('crypto');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
 const VotingCampaign = mongoose.model('VotingCampaign');
 const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
 
+const utils = require('./utils');
+
 const campaignBannerStorage = new GridFsStorage({
     url: process.env.DBURL,
     file: (req, file) => {
-        return new Promise((resolve, reject) => {
-            crypto.randomBytes(16, (err, buf) => {
-                if (err) {
-                    return reject(err);
-                }
-                const filename = buf.toString('hex') + '_' + file.originalname;
-                const fileInfo = {
-                    filename: filename,
-                    bucketName: 'campaignbanners',
-                };
-                resolve(fileInfo);
-            });
+        return new Promise((resolve) => {
+            const filename = file.originalname;
+            const fileInfo = {
+                filename: filename,
+                bucketName: 'campaignbanners',
+            };
+            resolve(fileInfo);
         });
     },
 });
@@ -34,18 +30,13 @@ const campaignBannerUpload = multer({
 const candidateFilesStorage = new GridFsStorage({
     url: process.env.DBURL,
     file: (req, file) => {
-        return new Promise((resolve, reject) => {
-            crypto.randomBytes(16, (err, buf) => {
-                if (err) {
-                    return reject(err);
-                }
-                const filename = buf.toString('hex') + '_' + file.originalname;
-                const fileInfo = {
-                    filename: filename,
-                    bucketName: 'campaigncandidatefiles',
-                };
-                resolve(fileInfo);
-            });
+        return new Promise((resolve) => {
+            const filename = file.originalname;
+            const fileInfo = {
+                filename: filename,
+                bucketName: 'campaigncandidatefiles',
+            };
+            resolve(fileInfo);
         });
     },
 });
@@ -232,45 +223,10 @@ exports.viewCampaignBanner = function (req, res) {
         req.params.campaignID,
         { banner: 1 },
         (err, campaign) => {
-            sendFile('banner', 'campaignbanners', campaign, err, res);
+            utils.sendFile('banner', 'campaignbanners', campaign, err, res);
         }
     );
 };
-
-function sendFile(fileType, bucketName, object, err, res) {
-    if (object === null || (err && err.name === 'CastError')) {
-        return res.status(404).json({
-            message: 'ID not found',
-        });
-    } else if (object[fileType] === undefined) {
-        return res.status(404).json({
-            message: `There is no ${fileType} file associated with this ID.`,
-        });
-    } else if (err) {
-        return res.status(500).json({
-            message: err.message,
-        });
-    }
-
-    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-        bucketName: bucketName,
-    });
-    const stream = bucket.openDownloadStream(
-        new mongoose.Types.ObjectId(object[fileType])
-    );
-    stream.on('error', (err) => {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({
-                message: 'File not found',
-            });
-        }
-        return res.status(500).json({
-            message: err.message,
-        });
-    });
-    res.writeHead(200);
-    stream.pipe(res);
-}
 
 /**
  * Nominates self as a candidate for the specified campaign.
@@ -684,7 +640,7 @@ function findCandidateAndSendFile(
             message: 'Candidate ID not found in this campaign.',
         });
     }
-    sendFile(fileType, bucketName, candidate, err, res);
+    utils.sendFile(fileType, bucketName, candidate, err, res);
 }
 
 /**

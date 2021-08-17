@@ -20,6 +20,7 @@ const grants = {
                 'faculty',
                 'course',
                 'branch',
+                'profilePicture',
             ],
         },
     },

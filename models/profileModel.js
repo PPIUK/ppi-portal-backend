@@ -116,6 +116,10 @@ var profileSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    profilePicture: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
+    },
     referral: {
         type: String,
         required: false,

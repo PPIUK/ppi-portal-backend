@@ -130,7 +130,7 @@ exports.register = function (req, res) {
 };
 
 exports.registerNew = function (req, res) {
-    profileController.studentProofUpload(req, res, async function (err) {
+    profileController.profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
                 message: err.field,
@@ -169,8 +169,17 @@ exports.registerNew = function (req, res) {
                     });
                 }
 
-                if (req.file) {
-                    req.body.studentProof = mongoose.Types.ObjectId(req.file.id);
+                if (req.files) {
+                    if ('studentProof' in req.files) {
+                        req.body.studentProof = mongoose.Types.ObjectId(
+                            req.files['studentProof'][0].id
+                        );
+                    }
+                    if ('profilePicture' in req.files) {
+                        req.body.profilePicture = mongoose.Types.ObjectId(
+                            req.files['profilePicture'][0].id
+                        );
+                    }
                 }
 
                 let profile = new Profile({

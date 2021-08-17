@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
-const crypto = require('crypto');
 
 const Profile = mongoose.model('Profile');
 const AccessControl = require('accesscontrol');
 const ac = require(global.appRoot + '/config/roles');
+const utils = require('../utils');
 
 const publicInfo = [
     '_id',
@@ -15,34 +15,33 @@ const publicInfo = [
     'faculty',
     'course',
     'branch',
+    'profilePicture',
 ];
 
-const studentProofStorage = new GridFsStorage({
+const profileFilesStorage = new GridFsStorage({
     url: process.env.DBURL,
     file: (req, file) => {
-        return new Promise((resolve, reject) => {
-            crypto.randomBytes(16, (err, buf) => {
-                if (err) {
-                    return reject(err);
-                }
-                const filename = buf.toString('hex') + '_' + file.originalname;
-                const fileInfo = {
-                    filename: filename,
-                    bucketName: 'studentproofs',
-                };
-                resolve(fileInfo);
-            });
+        return new Promise((resolve) => {
+            const filename = file.originalname;
+            const fileInfo = {
+                filename: filename,
+                bucketName: 'profilefiles',
+            };
+            resolve(fileInfo);
         });
     },
 });
 
-exports.studentProofStorage = studentProofStorage;
+exports.profileFilesStorage = profileFilesStorage;
 
-const studentProofUpload = multer({
-    storage: studentProofStorage,
-}).single('studentProofFile');
+const profileFilesUpload = multer({
+    storage: profileFilesStorage,
+}).fields([
+    { name: 'studentProof', maxCount: 1 },
+    { name: 'profilePicture', maxCount: 1 },
+]);
 
-exports.studentProofUpload = studentProofUpload;
+exports.profileFilesUpload = profileFilesUpload;
 
 /**
  * Gets info of all users. Depending on the requester's role/privileges, the behaviour is different:
@@ -155,7 +154,7 @@ exports.new = function (req, res) {
         });
     }
 
-    studentProofUpload(req, res, async function (err) {
+    profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
                 message: err.field,
@@ -176,9 +175,7 @@ exports.new = function (req, res) {
 
             let profile = new Profile(req.body);
 
-            if (req.file) {
-                profile.studentProof = mongoose.Types.ObjectId(req.file.id);
-            }
+            profile = saveFileId(req, profile);
 
             profile.save(function (err) {
                 if (err) {
@@ -198,6 +195,22 @@ exports.new = function (req, res) {
         });
     });
 };
+
+function saveFileId(req, profile) {
+    if (req.files) {
+        if ('studentProof' in req.files) {
+            profile.studentProof = mongoose.Types.ObjectId(
+                req.files['studentProof'][0].id
+            );
+        }
+        if ('profilePicture' in req.files) {
+            profile.profilePicture = mongoose.Types.ObjectId(
+                req.files['profilePicture'][0].id
+            );
+        }
+    }
+    return profile;
+}
 
 /**
  * Gets private info of a user if the requester have dataAccess role and is in the same branch as the requested user.
@@ -294,7 +307,7 @@ exports.update = function (req, res) {
         });
     }
 
-    studentProofUpload(req, res, async function (err) {
+    profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
                 message: err.field,
@@ -329,9 +342,7 @@ exports.update = function (req, res) {
                 });
             }
 
-            if (req.file) {
-                req.body.studentProof = mongoose.Types.ObjectId(req.file.id);
-            }
+            req.body = saveFileId(req, req.body);
 
             Profile.findByIdAndUpdate(
                 req.params.profile_id,
@@ -394,28 +405,18 @@ exports.delete = function (req, res) {
                 });
             }
 
+            const bucket = new mongoose.mongo.GridFSBucket(
+                mongoose.connection.db,
+                {
+                    bucketName: 'profilefiles',
+                }
+            );
+
             if (profile.studentProof) {
-                const bucket = new mongoose.mongo.GridFSBucket(
-                    mongoose.connection.db,
-                    {
-                        bucketName: 'studentproofs',
-                    }
-                );
-                bucket.delete(
-                    new mongoose.Types.ObjectId(profile.studentProof),
-                    (err) => {
-                        if (err) {
-                            if (err.message.startsWith('FileNotFound')) {
-                                return res.status(404).json({
-                                    message: 'File not found',
-                                });
-                            }
-                            return res.status(500).json({
-                                message: err.message,
-                            });
-                        }
-                    }
-                );
+                deleteFileFromBucket(bucket, profile.studentProof, res);
+            }
+            if (profile.profilePicture) {
+                deleteFileFromBucket(bucket, profile.profilePicture, res);
             }
 
             return res.status(200).json({
@@ -424,6 +425,21 @@ exports.delete = function (req, res) {
         });
     });
 };
+
+function deleteFileFromBucket(bucket, attribute, res) {
+    bucket.delete(new mongoose.Types.ObjectId(attribute), (err) => {
+        if (err) {
+            if (err.message.startsWith('FileNotFound')) {
+                return res.status(404).json({
+                    message: 'File not found',
+                });
+            }
+            return res.status(500).json({
+                message: err.message,
+            });
+        }
+    });
+}
 
 /**
  * Gets own profile info. Can also be called by basic role.
@@ -504,16 +520,14 @@ exports.updateSelf = function (req, res) {
         }
     }
 
-    studentProofUpload(req, res, async function (err) {
+    profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
                 message: err.field,
             });
         }
 
-        if (req.file) {
-            req.body.studentProof = mongoose.Types.ObjectId(req.file.id);
-        }
+        req.body = saveFileId(req, req.body);
 
         Profile.findByIdAndUpdate(
             res.locals.oauth.token.user,
@@ -527,6 +541,9 @@ exports.updateSelf = function (req, res) {
                 }
                 if (req.body.studentProof) {
                     profile._doc.studentProof = req.body.studentProof.toString();
+                }
+                if (req.body.profilePicture) {
+                    profile._doc.profilePicture = req.body.profilePicture.toString();
                 }
                 let filteredData = req.permission.filter(profile._doc);
                 filteredData = AccessControl.filter(filteredData, [
@@ -604,7 +621,7 @@ exports.viewOwnStudentProofFile = function (req, res) {
         res.locals.oauth.token.user,
         { studentProof: 1 },
         (err, profile) => {
-            sendStudentProofFile(profile, err, res);
+            utils.sendFile('studentProof', 'profilefiles', profile, err, res);
         }
     );
 };
@@ -640,47 +657,47 @@ exports.viewStudentProofFile = function (req, res) {
                         "You don't have enough privilege to do this action",
                 });
             }
-
-            sendStudentProofFile(profile, err, res);
+            utils.sendFile('studentProof', 'profilefiles', profile, err, res);
         }
     );
 };
 
-function sendStudentProofFile(profile, err, res) {
-    if (profile === null || (err && err.name === 'CastError')) {
-        return res.status(404).json({
-            message: 'Profile ID not found',
-        });
-    } else if (profile.studentProof === undefined) {
-        return res.status(404).json({
-            message:
-                'There is no student proof file associated with this profile ID',
-        });
-    } else if (err) {
-        return res.status(500).json({
-            message: err.message,
-        });
-    }
-
-    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
-        bucketName: 'studentproofs',
-    });
-    const stream = bucket.openDownloadStream(
-        new mongoose.Types.ObjectId(profile.studentProof)
-    );
-    stream.on('error', (err) => {
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({
-                message: 'File not found',
-            });
+/**
+ * Gets own profile picture file.
+ * @name GET_/api/profiles/me/profilepicture
+ * @return res.status 200 if own profile picture file retrieved successfully
+ * @return res.status 404 if there is no profile picture file uploaded
+ * @return res.status 500 if error
+ * @return stream profile picture file
+ */
+exports.viewOwnProfilePictureFile = function (req, res) {
+    Profile.findById(
+        res.locals.oauth.token.user,
+        { profilePicture: 1 },
+        (err, profile) => {
+            utils.sendFile('profilePicture', 'profilefiles', profile, err, res);
         }
-        return res.status(500).json({
-            message: err.message,
-        });
-    });
-    res.writeHead(200);
-    stream.pipe(res);
-}
+    );
+};
+
+/**
+ * Gets profile picture file of the specified profile id.
+ * @name GET_/api/profiles/:profile_id/profilepicture
+ * @return res.status 200 if profile picture file retrieved successfully
+ * @return res.status 403 if caller has no privilege to do this action
+ * @return res.status 404 if there is no profile picture file uploaded for the profile id
+ * @return res.status 500 if error
+ * @return stream profile picture file
+ */
+exports.viewProfilePictureFile = function (req, res) {
+    Profile.findById(
+        req.params.profile_id,
+        { profilePicture: 1 },
+        (err, profile) => {
+            utils.sendFile('profilePicture', 'profilefiles', profile, err, res);
+        }
+    );
+};
 
 // TODO: document
 exports.search = {
@@ -787,10 +804,12 @@ function getDefaultAggregateOptions(req) {
     });
 
     aggregate_options.push({
-        $addFields: { '_id': {
-                '$toString': '$_id'
-            }},
-    })
+        $addFields: {
+            _id: {
+                $toString: '$_id',
+            },
+        },
+    });
 
     const aggregate = Profile.aggregate(aggregate_options);
 
