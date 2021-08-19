@@ -51,6 +51,92 @@ const candidateFilesUpload = multer({
 ]);
 
 /**
+ * Gets active campaigns, which could be in nomination phase or voting phase.
+ * Voting results are excluded from the response.
+ * @name GET_/api/voting/active
+ * @return res.body.data is list of active campaigns
+ */
+exports.active = function (req, res) {
+    let now = new Date();
+    VotingCampaign.find(
+        {
+            nominateStart: { $lte: now },
+            voteEnd: { $gt: now },
+        },
+        { 'candidates.votes': 0 }
+    )
+        .then((campaigns) => {
+            return res.status(200).json({
+                message: 'Active campaigns returned successfully.',
+                data: campaigns,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+
+/**
+ * Gets active campaigns which are in nomination phase.
+ * Voting results are excluded from the response.
+ * @name GET_/api/voting/active/nominate
+ * @return res.body.data is list of active campaigns
+ */
+exports.activeNominate = function (req, res) {
+    let now = new Date();
+    VotingCampaign.find(
+        {
+            nominateStart: { $lte: now },
+            nominateEnd: { $gt: now },
+        },
+        { 'candidates.votes': 0 }
+    )
+        .then((campaigns) => {
+            return res.status(200).json({
+                message:
+                    'Active campaigns in nomination phase returned successfully.',
+                data: campaigns,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+
+/**
+ * Gets active campaigns which are in voting phase.
+ * Voting results are excluded from the response.
+ * @name GET_/api/voting/active/vote
+ * @return res.body.data is list of active campaigns
+ */
+exports.activeVote = function (req, res) {
+    let now = new Date();
+    VotingCampaign.find(
+        {
+            voteStart: { $lte: now },
+            voteEnd: { $gt: now },
+        },
+        { 'candidates.votes': 0 }
+    )
+        .then((campaigns) => {
+            return res.status(200).json({
+                message:
+                    'Active campaigns in vote phase returned successfully.',
+                data: campaigns,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+
+/**
  * Creates a new voting campaign.
  * This can only be called by voteOrganiser role.
  * See votingCampaignModel.js to see accepted fields.
