@@ -799,9 +799,98 @@ exports.viewMotivationEssay = function (req, res) {
 };
 
 /**
+ * Checks if caller is eligible to vote in the specified campaign.
+ * @name POST_/api/voting/:campaignID/eligibility
+ * @param req.params.campaignID is the campaign ID
+ * @return res.body.data is true or false
+ */
+exports.eligibility = async function (req, res) {
+    let voterId = String(res.locals.oauth.token.user._id);
+    let profile = await Profile.findById(voterId, {
+        roles: 1,
+        startDate: 1,
+        endDate: 1,
+        degreeLevel: 1,
+    });
+    if (!profile) {
+        return res.status(404).json({
+            message: 'Your profile is not found.',
+        });
+    }
+    if (!profile.roles.includes('verified')) {
+        return res.status(200).json({
+            data: false,
+        });
+    }
+
+    let campaign = await VotingCampaign.findById(req.params.campaignID);
+    if (!campaign) {
+        return res.status(404).json({
+            message: 'Campaign is not found',
+        });
+    }
+
+    if (profile.endDate < campaign.voterCutOffEndDate) {
+        return res.status(200).json({
+            data: false,
+        });
+    }
+    if (
+        //TODO: how to decide if the Masters course is a 1 year course or not???
+        profile.degreeLevel.includes('S2') &&
+        !profile.degreeLevel.includes('S1') && //skipping integrated masters
+        campaign.voterMastersCutOffStartDate &&
+        profile.startDate < campaign.voterMastersCutOffStartDate
+    ) {
+        return res.status(200).json({
+            data: false,
+        });
+    }
+
+    return res.status(200).json({
+        data: true,
+    });
+};
+
+/**
+ * Checks if caller has voted in the specified campaign.
+ * @name POST_/api/voting/:campaignID/hasVoted
+ * @param req.params.campaignID is the campaign ID
+ * @return res.body.data is true or false
+ */
+exports.hasVoted = function (req, res) {
+    let voterId = String(res.locals.oauth.token.user._id);
+    VotingCampaign.findById(
+        req.params.campaignID,
+        { candidates: 1 },
+        (err, campaign) => {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            let all_voters = [].concat.apply(
+                [],
+                campaign.candidates.map((cand) => {
+                    return cand.votes;
+                })
+            );
+            if (all_voters.some((v) => v.toString() === voterId)) {
+                return res.status(200).json({
+                    data: true,
+                });
+            }
+            return res.status(200).json({
+                data: false,
+            });
+        }
+    );
+};
+
+/**
  * Votes for the specified candidate in the specified campaign.
- * @name GET_/api/voting/:campaignID/vote/:userID
- * @param req.params.campaignID is the campaign ID of the banner
+ * @name POST_/api/voting/:campaignID/vote/:userID
+ * @param req.params.campaignID is the campaign ID
  * @param req.params.userID is the candidate ID
  */
 exports.vote = async function (req, res) {
