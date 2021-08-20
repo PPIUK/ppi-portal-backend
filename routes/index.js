@@ -53,6 +53,20 @@ module.exports = (app) => {
             profileController.updateSelf
         );
     router
+        .route('/profiles/me/studentproof')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readOwn'),
+            profileController.viewOwnStudentProofFile
+        );
+    router
+        .route('/profiles/me/profilepicture')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readOwn'),
+            profileController.viewOwnProfilePictureFile
+        );
+    router
         .route('/profiles/:profile_id')
         .get(
             app.oauth.authenticate(),
@@ -71,6 +85,20 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             profileController.grantAccess('deleteAny'),
             profileController.delete
+        );
+    router
+        .route('/profiles/:profile_id/studentproof')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readAny'),
+            profileController.viewStudentProofFile
+        );
+    router
+        .route('/profiles/:profile_id/profilepicture')
+        .get(
+            app.oauth.authenticate(),
+            profileController.grantAccess('readAny'),
+            profileController.viewProfilePictureFile
         );
     router
         .route('/profiles/:profile_id/public')
@@ -236,6 +264,92 @@ module.exports = (app) => {
             verifierController.grantAccess('deleteAny'),
             verifierController.delete
         );
+
+    let votingCampaignController = require('./votingCampaignController.js');
+    router.route('/voting').get(votingCampaignController.index);
+    router.route('/voting/archived').get(votingCampaignController.archived);
+    router.route('/voting/active').get(votingCampaignController.active);
+    router
+        .route('/voting/active/nominate')
+        .get(votingCampaignController.activeNominate);
+    router
+        .route('/voting/active/vote')
+        .get(votingCampaignController.activeVote);
+    router
+        .route('/voting/pubstats/:id')
+        .get(votingCampaignController.statistics);
+    router
+        .route('/voting/admin')
+        .post(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('createAny'),
+            votingCampaignController.new
+        );
+    router
+        .route('/voting/admin/:campaignID')
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('updateAny'),
+            votingCampaignController.update
+        )
+        .delete(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('deleteAny'),
+            votingCampaignController.delete
+        );
+    router
+        .route('/voting/:campaignID')
+        .get(app.oauth.authenticate(), votingCampaignController.view);
+    router
+        .route('/voting/:campaignID/banner')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewCampaignBanner
+        );
+    router
+        .route('/voting/:campaignID/submission')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewSelfNomination
+        )
+        .post(app.oauth.authenticate(), votingCampaignController.newNomination)
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.updateNomination
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewNomination);
+    router
+        .route('/voting/:campaignID/submission/:userID/cv')
+        .get(app.oauth.authenticate(), votingCampaignController.viewCV);
+    router
+        .route('/voting/:campaignID/submission/:userID/organisationExp')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewOrganisationExp
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID/notInOfficeStatement')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewNotInOfficeStatement
+        );
+    router
+        .route('/voting/:campaignID/submission/:userID/motivationEssay')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.viewMotivationEssay
+        );
+    router
+        .route('/voting/:campaignID/vote/:userID')
+        .post(app.oauth.authenticate(), votingCampaignController.vote);
+    router
+        .route('/voting/:campaignID/eligibility')
+        .get(app.oauth.authenticate(), votingCampaignController.eligibility);
+    router
+        .route('/voting/:campaignID/hasVoted')
+        .get(app.oauth.authenticate(), votingCampaignController.hasVoted);
     // Export API routes
     return router;
 };

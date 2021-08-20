@@ -91,6 +91,10 @@ var profileSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    studentProof: {
+        type: mongoose.Schema.ObjectId,
+        required: false,
+    },
     fundingSource: {
         type: String,
         required: false,
@@ -110,6 +114,10 @@ var profileSchema = new mongoose.Schema({
     },
     linkedin: {
         type: String,
+        required: false,
+    },
+    profilePicture: {
+        type: mongoose.Schema.ObjectId,
         required: false,
     },
     referral: {

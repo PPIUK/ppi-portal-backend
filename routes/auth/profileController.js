@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
+const multer = require('multer');
+const GridFsStorage = require('multer-gridfs-storage');
 
 const Profile = mongoose.model('Profile');
 const AccessControl = require('accesscontrol');
 const ac = require(global.appRoot + '/config/roles');
-// Profile.createIndexes();
+const utils = require('../utils');
 
 const publicInfo = [
     '_id',
@@ -13,7 +15,33 @@ const publicInfo = [
     'faculty',
     'course',
     'branch',
+    'profilePicture',
 ];
+
+const profileFilesStorage = new GridFsStorage({
+    url: process.env.DBURL,
+    file: (req, file) => {
+        return new Promise((resolve) => {
+            const filename = file.originalname;
+            const fileInfo = {
+                filename: filename,
+                bucketName: 'profilefiles',
+            };
+            resolve(fileInfo);
+        });
+    },
+});
+
+exports.profileFilesStorage = profileFilesStorage;
+
+const profileFilesUpload = multer({
+    storage: profileFilesStorage,
+}).fields([
+    { name: 'studentProof', maxCount: 1 },
+    { name: 'profilePicture', maxCount: 1 },
+]);
+
+exports.profileFilesUpload = profileFilesUpload;
 
 /**
  * Gets info of all users. Depending on the requester's role/privileges, the behaviour is different:
@@ -47,6 +75,9 @@ exports.index = function (req, res) {
             });
         }
         profiles.profiles = profiles.profiles.map((_profile) => {
+            if (_profile.studentProof) {
+                _profile.studentProof = _profile.studentProof.toString();
+            }
             if (
                 _profile.branch === res.locals.oauth.token.user.branch ||
                 res.locals.oauth.token.user.branch === 'All'
@@ -116,42 +147,70 @@ exports.indexPublic = function (req, res) {
 exports.new = function (req, res) {
     if (
         req.body.branch !== res.locals.oauth.token.user.branch &&
-        res.locals.outh.token.user.branch !== 'All'
+        res.locals.oauth.token.user.branch !== 'All'
     ) {
         return res.status(403).json({
             message: "You don't have enough privilege to do this action",
         });
     }
-    Profile.exists({ email: req.body.email }, function (err, emailExists) {
+
+    profileFilesUpload(req, res, async function (err) {
         if (err) {
-            return res.status(400).json({
-                message: err.message,
-            });
-        }
-        if (emailExists) {
-            return res.status(409).json({
-                message: 'Email already registered.',
+            return res.status(err.code).json({
+                message: err.field,
             });
         }
 
-        let profile = new Profile(req.body);
-        profile.save(function (err) {
+        Profile.exists({ email: req.body.email }, function (err, emailExists) {
             if (err) {
                 return res.status(400).json({
                     message: err.message,
                 });
             }
-
-            return res
-                .status(201)
-                .location(process.env.BASE_URI + '/profiles/' + profile._id)
-                .json({
-                    message: 'New profile created!',
-                    data: profile,
+            if (emailExists) {
+                return res.status(409).json({
+                    message: 'Email already registered.',
                 });
+            }
+
+            let profile = new Profile(req.body);
+
+            profile = saveFileId(req, profile);
+
+            profile.save(function (err) {
+                if (err) {
+                    return res.status(400).json({
+                        message: err.message,
+                    });
+                }
+
+                return res
+                    .status(201)
+                    .location(process.env.BASE_URI + '/profiles/' + profile._id)
+                    .json({
+                        message: 'New profile created!',
+                        data: profile,
+                    });
+            });
         });
     });
 };
+
+function saveFileId(req, profile) {
+    if (req.files) {
+        if ('studentProof' in req.files) {
+            profile.studentProof = mongoose.Types.ObjectId(
+                req.files['studentProof'][0].id
+            );
+        }
+        if ('profilePicture' in req.files) {
+            profile.profilePicture = mongoose.Types.ObjectId(
+                req.files['profilePicture'][0].id
+            );
+        }
+    }
+    return profile;
+}
 
 /**
  * Gets private info of a user if the requester have dataAccess role and is in the same branch as the requested user.
@@ -185,6 +244,9 @@ exports.view = function (req, res) {
                 res.locals.oauth.token.user.branch === 'All'
             ) {
                 _profile = req.permission.filter(profile._doc);
+                if (profile.studentProof) {
+                    _profile.studentProof = profile.studentProof.toString();
+                }
             } else {
                 _profile = AccessControl.filter(profile._doc, publicInfo);
             }
@@ -245,46 +307,63 @@ exports.update = function (req, res) {
         });
     }
 
-    Profile.findById(req.params.profile_id, function (err, profile) {
-        if (profile === null || (err && err.name === 'CastError')) {
-            return res.status(404).json({
-                message: 'Id not found',
-            });
-        }
+    profileFilesUpload(req, res, async function (err) {
         if (err) {
-            return res.status(500).json({
-                message: err.message,
+            return res.status(err.code).json({
+                message: err.field,
             });
         }
-        if (profile.branch !== res.locals.oauth.token.user.branch) {
-            return res.status(403).json({
-                message: "You don't have enough privilege to do this action",
-            });
-        }
-        if (
-            req.body.branch !== profile.branch &&
-            res.locals.oauth.token.user.branch !== 'All'
-        )
-            return res.status(403).json({
-                message: "You don't have enough privilege to do this action",
-            });
 
-        Profile.findByIdAndUpdate(
-            req.params.profile_id,
-            req.body,
-            { new: true },
-            function (err, profile) {
-                if (err) {
-                    return res.status(500).json({
-                        message: err.message,
-                    });
-                }
-                return res.status(200).json({
-                    message: 'Profile info updated',
-                    data: req.permission.filter(profile._doc),
+        Profile.findById(req.params.profile_id, function (err, profile) {
+            if (profile === null || (err && err.name === 'CastError')) {
+                return res.status(404).json({
+                    message: 'Id not found',
                 });
             }
-        );
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            // FIXME: the two if statements below prohibit almost any update to be done really, only 'All' branch can update and it can only update profile in the same branch
+            if (profile.branch !== res.locals.oauth.token.user.branch) {
+                return res.status(403).json({
+                    message:
+                        "You don't have enough privilege to do this action",
+                });
+            }
+            if (
+                req.body.branch !== profile.branch &&
+                res.locals.oauth.token.user.branch !== 'All'
+            ) {
+                return res.status(403).json({
+                    message:
+                        "You don't have enough privilege to do this action",
+                });
+            }
+
+            req.body = saveFileId(req, req.body);
+
+            Profile.findByIdAndUpdate(
+                req.params.profile_id,
+                req.body,
+                { new: true },
+                function (err, profile) {
+                    if (err) {
+                        return res.status(500).json({
+                            message: err.message,
+                        });
+                    }
+                    if (profile.studentProof) {
+                        profile._doc.studentProof = profile.studentProof.toString();
+                    }
+                    return res.status(200).json({
+                        message: 'Profile info updated',
+                        data: req.permission.filter(profile._doc),
+                    });
+                }
+            );
+        });
     });
 };
 
@@ -312,7 +391,7 @@ exports.delete = function (req, res) {
         }
         if (
             profile.branch !== res.locals.oauth.token.user.branch &&
-            res.locals.oauth.toke.user.branch !== 'All'
+            res.locals.oauth.token.user.branch !== 'All'
         ) {
             return res.status(403).json({
                 message: "You don't have enough privilege to do this action",
@@ -325,12 +404,42 @@ exports.delete = function (req, res) {
                     message: err.message,
                 });
             }
+
+            const bucket = new mongoose.mongo.GridFSBucket(
+                mongoose.connection.db,
+                {
+                    bucketName: 'profilefiles',
+                }
+            );
+
+            if (profile.studentProof) {
+                deleteFileFromBucket(bucket, profile.studentProof, res);
+            }
+            if (profile.profilePicture) {
+                deleteFileFromBucket(bucket, profile.profilePicture, res);
+            }
+
             return res.status(200).json({
                 message: 'Profile deleted!',
             });
         });
     });
 };
+
+function deleteFileFromBucket(bucket, attribute, res) {
+    bucket.delete(new mongoose.Types.ObjectId(attribute), (err) => {
+        if (err) {
+            if (err.message.startsWith('FileNotFound')) {
+                return res.status(404).json({
+                    message: 'File not found',
+                });
+            }
+            return res.status(500).json({
+                message: err.message,
+            });
+        }
+    });
+}
 
 /**
  * Gets own profile info. Can also be called by basic role.
@@ -350,7 +459,10 @@ exports.viewSelf = function (req, res) {
                     message: err.message,
                 });
             }
-            profile._doc._id = profile._id.toString()
+            profile._doc._id = profile._id.toString();
+            if (profile.studentProof) {
+                profile._doc.studentProof = profile.studentProof.toString();
+            }
             return res.status(200).json({
                 message: 'Own profile details returned successfully',
                 data: req.permission.filter(profile._doc),
@@ -395,7 +507,10 @@ exports.updateSelf = function (req, res) {
 
     // check for priviliged roles, these are untransferrable
     const disallowedRoles = ['dataAccess', 'verifier'];
-    if (req.body.branch !== res.locals.oauth.token.user.branch) {
+    if (
+        req.body.branch &&
+        req.body.branch !== res.locals.oauth.token.user.branch
+    ) {
         for (let role of res.locals.oauth.token.user.roles) {
             if (disallowedRoles.includes(role))
                 return res.status(400).json({
@@ -404,27 +519,44 @@ exports.updateSelf = function (req, res) {
                 });
         }
     }
-    Profile.findByIdAndUpdate(
-        res.locals.oauth.token.user,
-        req.body,
-        { new: true },
-        function (err, profile) {
-            if (err) {
-                return res.status(500).json({
-                    message: err.message,
-                });
-            }
-            let filteredData = req.permission.filter(profile._doc);
-            filteredData = AccessControl.filter(filteredData, [
-                '*',
-                '!password',
-            ]);
-            return res.status(200).json({
-                message: 'Own profile details updated successfully',
-                data: filteredData,
+
+    profileFilesUpload(req, res, async function (err) {
+        if (err) {
+            return res.status(err.code).json({
+                message: err.field,
             });
         }
-    );
+
+        req.body = saveFileId(req, req.body);
+
+        Profile.findByIdAndUpdate(
+            res.locals.oauth.token.user,
+            req.body,
+            { new: true },
+            function (err, profile) {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                if (req.body.studentProof) {
+                    profile._doc.studentProof = req.body.studentProof.toString();
+                }
+                if (req.body.profilePicture) {
+                    profile._doc.profilePicture = req.body.profilePicture.toString();
+                }
+                let filteredData = req.permission.filter(profile._doc);
+                filteredData = AccessControl.filter(filteredData, [
+                    '*',
+                    '!password',
+                ]);
+                return res.status(200).json({
+                    message: 'Own profile details updated successfully',
+                    data: filteredData,
+                });
+            }
+        );
+    });
 };
 
 /**
@@ -476,6 +608,97 @@ exports.verify = function (req, res) {
     });
 };
 
+/**
+ * Gets own student proof file.
+ * @name GET_/api/profiles/me/studentproof
+ * @return res.status 200 if own student proof file retrieved successfully
+ * @return res.status 404 if there is no student proof file uploaded
+ * @return res.status 500 if error
+ * @return stream student proof file
+ */
+exports.viewOwnStudentProofFile = function (req, res) {
+    Profile.findById(
+        res.locals.oauth.token.user,
+        { studentProof: 1 },
+        (err, profile) => {
+            utils.sendFile('studentProof', 'profilefiles', profile, err, res);
+        }
+    );
+};
+
+/**
+ * Gets student proof file of the specified profile id.
+ * @name GET_/api/profiles/:profile_id/studentproof
+ * @return res.status 200 if student proof file retrieved successfully
+ * @return res.status 403 if caller has no privilege to do this action
+ * @return res.status 404 if there is no student proof file uploaded for the profile id
+ * @return res.status 500 if error
+ * @return stream student proof file
+ */
+exports.viewStudentProofFile = function (req, res) {
+    Profile.findById(
+        req.params.profile_id,
+        { studentProof: 1, branch: 1 },
+        (err, profile) => {
+            if (
+                !res.locals.oauth.token.user.roles.includes('verifier') &&
+                !res.locals.oauth.token.user.roles.includes('dataAccess')
+            ) {
+                return res.status(403).json({
+                    message:
+                        "You don't have enough privilege to do this action",
+                });
+            } else if (
+                profile.branch !== res.locals.oauth.token.user.branch &&
+                res.locals.oauth.token.user.branch !== 'All'
+            ) {
+                return res.status(403).json({
+                    message:
+                        "You don't have enough privilege to do this action",
+                });
+            }
+            utils.sendFile('studentProof', 'profilefiles', profile, err, res);
+        }
+    );
+};
+
+/**
+ * Gets own profile picture file.
+ * @name GET_/api/profiles/me/profilepicture
+ * @return res.status 200 if own profile picture file retrieved successfully
+ * @return res.status 404 if there is no profile picture file uploaded
+ * @return res.status 500 if error
+ * @return stream profile picture file
+ */
+exports.viewOwnProfilePictureFile = function (req, res) {
+    Profile.findById(
+        res.locals.oauth.token.user,
+        { profilePicture: 1 },
+        (err, profile) => {
+            utils.sendFile('profilePicture', 'profilefiles', profile, err, res);
+        }
+    );
+};
+
+/**
+ * Gets profile picture file of the specified profile id.
+ * @name GET_/api/profiles/:profile_id/profilepicture
+ * @return res.status 200 if profile picture file retrieved successfully
+ * @return res.status 403 if caller has no privilege to do this action
+ * @return res.status 404 if there is no profile picture file uploaded for the profile id
+ * @return res.status 500 if error
+ * @return stream profile picture file
+ */
+exports.viewProfilePictureFile = function (req, res) {
+    Profile.findById(
+        req.params.profile_id,
+        { profilePicture: 1 },
+        (err, profile) => {
+            utils.sendFile('profilePicture', 'profilefiles', profile, err, res);
+        }
+    );
+};
+
 // TODO: document
 exports.search = {
     nameLookup: (req, res) => {
@@ -484,8 +707,8 @@ exports.search = {
             (err, profiles) => {
                 if (err) return res.status(500).json({ message: err.message });
 
-                profiles.forEach(profile =>
-                    profile._doc._id = profile._id.toString()
+                profiles.forEach(
+                    (profile) => (profile._doc._id = profile._id.toString())
                 );
 
                 return res.status(200).json({
@@ -581,10 +804,12 @@ function getDefaultAggregateOptions(req) {
     });
 
     aggregate_options.push({
-        $addFields: { '_id': {
-                '$toString': '$_id'
-            }},
-    })
+        $addFields: {
+            _id: {
+                $toString: '$_id',
+            },
+        },
+    });
 
     const aggregate = Profile.aggregate(aggregate_options);
 

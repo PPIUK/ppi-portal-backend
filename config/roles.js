@@ -20,6 +20,7 @@ const grants = {
                 'faculty',
                 'course',
                 'branch',
+                'profilePicture',
             ],
         },
     },
@@ -66,6 +67,15 @@ const grants = {
 
     thesisAdmin: {
         thesis: {
+            'read:any': ['*'],
+            'create:any': ['*'],
+            'update:any': ['*'],
+            'delete:any': ['*'],
+        },
+    },
+
+    voteOrganiser: {
+        votingCampaign: {
             'read:any': ['*'],
             'create:any': ['*'],
             'update:any': ['*'],
