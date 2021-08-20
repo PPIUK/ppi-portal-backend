@@ -136,6 +136,51 @@ exports.activeVote = function (req, res) {
         });
 };
 
+exports.statistics = async function (req, res) {
+    VotingCampaign.findById(req.params.id, { candidates: 1 })
+        .populate('candidates.votes', 'branch')
+        .exec(function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
+            }
+            let candidates = campaign.candidates;
+            let votes = candidates.map((cand) => {
+                let branchDistribution = cand.votes.reduce((total, value) => {
+                    total[value.branch] = (total[value.branch] || 0) + 1;
+                    return total;
+                }, {});
+                return {
+                    candidateID: cand.candidateID,
+                    totalVotes: cand.votes.length,
+                    branchDistribution: branchDistribution,
+                };
+            });
+
+            let all_votes = [].concat.apply(
+                [],
+                candidates.map((cand) => cand.votes)
+            );
+            let branchDistribution = all_votes.reduce((total, value) => {
+                total[value.branch] = (total[value.branch] || 0) + 1;
+                return total;
+            }, {});
+            return res.status(200).json({
+                message: 'Campaign statistics returned.',
+                data: {
+                    candidates: votes,
+                    branchDistribution: branchDistribution,
+                },
+            });
+        });
+};
+
 /**
  * Creates a new voting campaign.
  * This can only be called by voteOrganiser role.

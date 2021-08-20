@@ -33,6 +33,7 @@ const votingCandidateSchema = new mongoose.Schema({
         type: [mongoose.Schema.ObjectId],
         required: true,
         default: [],
+        ref: 'Profile',
     },
 });
 
