@@ -51,6 +51,51 @@ const candidateFilesUpload = multer({
 ]);
 
 /**
+ * @name GET_/api/voting
+ */
+exports.index = function (req, res) {
+    VotingCampaign.find({}, { 'candidates.votes': 0 })
+        .then((campaigns) => {
+            return res.status(200).json({
+                message: 'All campaigns returned successfully.',
+                data: campaigns,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+
+/**
+ * Gets archived campaigns
+ * Voting results are excluded from the response.
+ * @name GET_/api/voting/archived
+ * @return res.body.data is list of archived campaigns
+ */
+exports.archived = function (req, res) {
+    let now = new Date();
+    VotingCampaign.find(
+        {
+            voteEnd: { $lte: now },
+        },
+        { 'candidates.votes': 0 }
+    )
+        .then((campaigns) => {
+            return res.status(200).json({
+                message: 'Archived campaigns returned successfully.',
+                data: campaigns,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+
+/**
  * Gets active campaigns, which could be in nomination phase or voting phase.
  * Voting results are excluded from the response.
  * @name GET_/api/voting/active
@@ -354,6 +399,7 @@ exports.viewCampaignBanner = function (req, res) {
         req.params.campaignID,
         { banner: 1 },
         (err, campaign) => {
+            if (!campaign) return res.sendStatus(404);
             utils.sendFile('banner', 'campaignbanners', campaign, err, res);
         }
     );

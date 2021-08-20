@@ -266,6 +266,8 @@ module.exports = (app) => {
         );
 
     let votingCampaignController = require('./votingCampaignController.js');
+    router.route('/voting').get(votingCampaignController.index);
+    router.route('/voting/archived').get(votingCampaignController.archived);
     router.route('/voting/active').get(votingCampaignController.active);
     router
         .route('/voting/active/nominate')
