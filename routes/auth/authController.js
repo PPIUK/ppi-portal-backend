@@ -136,70 +136,69 @@ exports.registerNew = function (req, res) {
                 message: err.field,
             });
         }
-
-        Profile.findOne(
-            { email: req.body.email },
-            async function (err, _profile) {
-                if (err) {
-                    return res.status(400).json({
-                        message: err.message,
-                    });
-                }
-                if (_profile) {
-                    return res.status(409).json({
-                        message:
-                            'Email already registered. Please login /auth/login or set password /auth/set-password.',
-                    });
-                }
-                if (
-                    req.body.email &&
-                    !allowedDomains.includes(req.body.email.match(/@(.*)/)[1])
-                )
-                    return res.status(400).json({
-                        message: 'Email is not allowed',
-                    });
-                if (!req.body.password) {
-                    return res.status(400).json({
-                        message: 'Password required.',
-                    });
-                }
-                if (req.body.branch === 'All') {
-                    return res.status(400).json({
-                        message: `Cannot set own branch to 'All'`,
-                    });
-                }
-
-                if (req.files) {
-                    if ('studentProof' in req.files) {
-                        req.body.studentProof = mongoose.Types.ObjectId(
-                            req.files['studentProof'][0].id
-                        );
-                    }
-                    if ('profilePicture' in req.files) {
-                        req.body.profilePicture = mongoose.Types.ObjectId(
-                            req.files['profilePicture'][0].id
-                        );
-                    }
-                }
-
-                let profile = new Profile({
-                    ...req.body,
-                    emailVerified: false,
-                    roles: ['basic'],
+        const emailQuery = req.body.email
+            ? { email: req.body.email }
+            : { personalEmail: req.body.personalEmail };
+        Profile.findOne(emailQuery, async function (err, _profile) {
+            if (err) {
+                return res.status(400).json({
+                    message: err.message,
                 });
-
-                try {
-                    await profile.setPassword(req.body.password);
-                    await profile.save();
-                } catch (err) {
-                    return res.status(500).json({
-                        message: err.message,
-                    });
-                }
-
-                await sendVerificationEmail(profile, req, res);
             }
-        );
+            if (_profile) {
+                return res.status(409).json({
+                    message:
+                        'Email already registered. Please login /auth/login or set password /auth/set-password.',
+                });
+            }
+            if (
+                req.body.email &&
+                !allowedDomains.includes(req.body.email.match(/@(.*)/)[1])
+            )
+                return res.status(400).json({
+                    message: 'Email is not allowed',
+                });
+            if (!req.body.password) {
+                return res.status(400).json({
+                    message: 'Password required.',
+                });
+            }
+            if (req.body.branch === 'All') {
+                return res.status(400).json({
+                    message: `Cannot set own branch to 'All'`,
+                });
+            }
+
+            if (req.files) {
+                if ('studentProof' in req.files) {
+                    req.body.studentProof = mongoose.Types.ObjectId(
+                        req.files['studentProof'][0].id
+                    );
+                }
+                if ('profilePicture' in req.files) {
+                    req.body.profilePicture = mongoose.Types.ObjectId(
+                        req.files['profilePicture'][0].id
+                    );
+                }
+            }
+
+            let profile = new Profile({
+                ...req.body,
+                emailVerified: false,
+                roles: ['basic'],
+            });
+
+            try {
+                await profile.setPassword(req.body.password);
+                await profile.save();
+            } catch (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+
+            await sendVerificationEmail(profile, req, res);
+        });
     });
 };
 
@@ -500,8 +499,16 @@ async function sendVerificationEmail(profile, req, res) {
             to: profile.email, // list of receivers
             subject: 'Verify your PPI UK Portal account!', // Subject line
             text: link, // plain text body
-            html: `<a href="${link}">Click here</a> to verify your account!\n\nUse this link if the above does not work:\n${link}`, // html body
+            html: `<a href="${link}">Click here</a> to verify your account!<br/>Use this link if the above does not work:<br/>${link}`, // html body
         };
+
+        if (!profile.email) {
+            message.to = profile.emailPersonal;
+            message.html +=
+                '<br/><br/> You have not submitted your university email address. ' +
+                'You need to update your university email through the portal once you have access to it, ' +
+                'no later than 31 September 2021';
+        }
 
         mailTransporter.sendMail(message, (err) => {
             if (err) {
@@ -509,10 +516,11 @@ async function sendVerificationEmail(profile, req, res) {
                     message: err.message,
                 });
             }
+            let email = profile.email ? profile.email : profile.emailPersonal;
             return res.status(201).json({
                 message:
                     'Account registered. A verification email has been sent to ' +
-                    profile.email +
+                    email +
                     '.',
             });
         });

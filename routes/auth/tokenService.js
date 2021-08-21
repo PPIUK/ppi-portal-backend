@@ -33,7 +33,9 @@ const model = {
     },
 
     getUser: function getUser(email, password, cbFunc) {
-        Profile.findOne({ email: email }, async function (err, profile) {
+        Profile.findOne(
+            { $or: [{ email: email }, { emailPersonal: email }] },
+            async function (err, profile) {
             if (!profile) {
                 return cbFunc(false, null);
             }

@@ -101,7 +101,7 @@ var profileSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true,
+        required: false, //TODO: revert
         // unique: true
     },
     emailPersonal: {
