@@ -5,6 +5,10 @@ The backend code for the PPI Portal project. Made using Mongo, Express, NodeJS.
 
 [Documentation](https://github.com/PPIUK/ppi-portal-backend/blob/master/DOCUMENTATION.md)
 
+## Running locally
+1. `npm install` and then `npm start`
+    a. Make sure you run the backend first before the frontend, or set backend to port 3000 and frontend to port 3001
+
 ## Contributing
 ### Feature Request
 Feature requests can be made in [Issues](https://github.com/PPIUK/ppi-portal-backend/issues)->Feature Request Template
