@@ -8,6 +8,7 @@ const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
 
 const utils = require('./utils');
+const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
 const campaignBannerStorage = new GridFsStorage({
     url: process.env.DBURL,
@@ -504,10 +505,25 @@ exports.newNomination = function (req, res) {
                                 message: 'Campaign ID does not exist.',
                             });
                         }
-                        return res.status(200).json({
-                            message: 'Voting candidate submitted.',
-                            candidateId: candidate.candidateID,
-                        });
+
+                        if (
+                            candidate.cv &&
+                            candidate.organisationExp &&
+                            candidate.notInOfficeStatement &&
+                            candidate.videoLink &&
+                            candidate.motivationEssay
+                        ) {
+                            sendCompletedSubmissionEmail(
+                                res.locals.oauth.token.user._id,
+                                req,
+                                res
+                            );
+                        } else {
+                            return res.status(200).json({
+                                message: 'Voting candidate submitted.',
+                                candidateId: candidate.candidateID,
+                            });
+                        }
                     }
                 );
             }
@@ -659,16 +675,92 @@ exports.updateNomination = function (req, res) {
                             });
                         }
 
-                        return res.status(200).json({
-                            message: 'Voting candidate updated.',
-                            candidateId: res.locals.oauth.token.user._id,
-                        });
+                        VotingCampaign.findById(
+                            req.params.campaignID,
+                            { candidates: 1 },
+                            function (err, campaign) {
+                                let candidate = campaign.candidates.find(
+                                    ({ candidateID }) =>
+                                        String(candidateID) ===
+                                        String(res.locals.oauth.token.user._id)
+                                );
+
+                                if (
+                                    candidate.cv &&
+                                    candidate.organisationExp &&
+                                    candidate.notInOfficeStatement &&
+                                    candidate.videoLink &&
+                                    candidate.motivationEssay
+                                ) {
+                                    sendCompletedSubmissionEmail(
+                                        res.locals.oauth.token.user._id,
+                                        req,
+                                        res
+                                    );
+                                } else {
+                                    return res.status(200).json({
+                                        message: 'Voting candidate updated.',
+                                        candidateId:
+                                            res.locals.oauth.token.user._id,
+                                    });
+                                }
+                            }
+                        );
                     }
                 );
             }
         );
     });
 };
+
+async function sendCompletedSubmissionEmail(candidateId, req, res) {
+    Profile.findById(
+        candidateId,
+        { email: 1, emailPersonal: 1 },
+        function (err, profile) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!profile) {
+                return res.status(404).json({
+                    message: 'Invalid profile ID.',
+                });
+            }
+
+            let emails = [];
+            if (profile.email) {
+                emails.push(profile.email);
+            }
+            if (profile.emailPersonal) {
+                emails.push(profile.emailPersonal);
+            }
+            let message = {
+                from: 'KPU PPI UK - No Reply <kpuppiuk@gmail.com>', // sender address
+                replyTo: 'no-reply@example.com',
+                to: emails, // list of receivers
+                subject: 'Thank you for your submission', // Subject line
+                html: `<p>Thank you for your submission. You are allowed to update your submission until the deadline.
+                The successful candidate will be announced in due course.
+                Follow our Instagram account @kpuppi_unitedkingdom or explore the hashtag #PPIUKMemilih 
+                for any update about PPI UK General Election 2021.
+                Send us your enquiries to kpuppiuk@gmail.com </p>`, // html body
+            };
+
+            mailTransporter.sendMail(message, (err) => {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(201).json({
+                    message: 'Submission completed and email sent',
+                });
+            });
+        }
+    );
+}
 
 /**
  * View nomination of the specified candidate of the specified campaign.
