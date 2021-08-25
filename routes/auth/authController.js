@@ -138,7 +138,7 @@ exports.registerNew = function (req, res) {
         }
         const emailQuery = req.body.email
             ? { email: req.body.email }
-            : { personalEmail: req.body.personalEmail };
+            : { emailPersonal: req.body.emailPersonal };
         Profile.findOne(emailQuery, async function (err, _profile) {
             if (err) {
                 return res.status(400).json({
