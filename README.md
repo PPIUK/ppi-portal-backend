@@ -6,7 +6,8 @@ The backend code for the PPI Portal project. Made using Mongo, Express, NodeJS.
 [Documentation](https://github.com/PPIUK/ppi-portal-backend/blob/master/DOCUMENTATION.md)
 
 ## Running locally
-1. `npm install` and then `npm start`
+1. [Install MongoDB](https://docs.mongodb.com/manual/installation/), then run a local instance
+2. `npm install` and then `npm start`
     a. Make sure you run the backend first before the frontend, or set backend to port 3000 and frontend to port 3001
 
 ## Contributing
