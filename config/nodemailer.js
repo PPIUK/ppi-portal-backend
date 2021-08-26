@@ -12,12 +12,21 @@ const nodemailer = require('nodemailer');
 
 // create transport + verify
 let transport = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    host:
+        process.env.NODE_ENV === 'production'
+            ? 'smtp.gmail.com'
+            : 'smtp.ethereal.email',
+    port: process.env.NODE_ENV === 'production' ? 465 : 587,
+    secure: process.env.NODE_ENV === 'production' ? true : false,
     auth: {
-        user: 'ppiunitedkingdom@gmail.com',
-        pass: process.env.MAILPASS,
+        user:
+            process.env.NODE_ENV === 'production'
+                ? 'ppiunitedkingdom@gmail.com'
+                : process.env.ETHEREAL_USER,
+        pass:
+            process.env.NODE_ENV === 'production'
+                ? process.env.MAILPASS
+                : process.env.ETHEREAL_PASS,
     },
     tls: {
         rejectUnauthorized: false,
