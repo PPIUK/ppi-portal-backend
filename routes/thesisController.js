@@ -315,6 +315,110 @@ exports.search = function (req, res) {
 };
 
 /**
+ * Returns all thesis.
+ * This endpoint is public.
+ * @param req.query.cluster is the numbering code for the cluster to be filtered
+ * @param req.query.paginate is true if want to use pagination, false if not
+ * @param req.query.page
+ * @param req.query.limit is 100
+ * @return theses Array of search result
+ */
+exports.feed = function (req, res) {
+    let aggregate_options = [];
+    let match = {};
+    if (req.query.cluster) {
+        switch (parseInt(req.query.cluster)) {
+            case 1:
+                match.cluster = 'Economics and Business';
+                break;
+            case 2:
+                match.cluster = 'Education';
+                break;
+            case 3:
+                match.cluster = 'Energy';
+                break;
+            case 4:
+                match.cluster = 'Health';
+                break;
+            case 5:
+                match.cluster = 'Infrastructure and Built Environment';
+                break;
+            case 6:
+                match.cluster = 'Politics and Law';
+                break;
+            case 7:
+                match.cluster = 'Social Development, Arts and Humanity';
+                break;
+            case 8:
+                match.cluster = 'STEM';
+                break;
+        }
+    }
+    aggregate_options.push({ $match: match });
+    aggregate_options.push({
+        $unset: ['__v', 'uploadedBy', 'fileId'],
+    });
+    const aggregate = Thesis.aggregate(aggregate_options);
+
+    //Pagination
+    let page = parseInt(req.query.page) || 1;
+    let limit = parseInt(req.query.limit) || 100;
+    let pagination = req.query.paginate === 'true' || false;
+
+    let options = {
+        pagination,
+        customLabels: {
+            totalDocs: 'totalTheses',
+            docs: 'theses',
+        },
+    };
+
+    if (pagination === true) {
+        options.page = page;
+        options.limit = limit;
+    }
+
+    Thesis.aggregatePaginate(aggregate, options)
+        .then(async (data) => {
+            for (let thesis of data.theses) {
+                try {
+                    let profile = await Profile.findById(
+                        thesis.correspondingAuthor,
+                        { _id: 1, fullName: 1 }
+                    );
+                    if (profile !== null)
+                        thesis.correspondingAuthor = profile.fullName;
+
+                    let thesisAuthors = [];
+                    for (const author of thesis.authors) {
+                        if (mongoose.isValidObjectId(author)) {
+                            let profile = await Profile.findById(author, {
+                                fullName: 1,
+                            });
+
+                            if (profile !== null)
+                                thesisAuthors.push(profile.fullName);
+                        } else {
+                            thesisAuthors.push(author);
+                        }
+                    }
+                    thesis.authors = thesisAuthors;
+                } catch {
+                    // ok
+                }
+            }
+            return res.status(200).json({
+                message: 'Theses retrieved successfully',
+                data: data,
+            });
+        })
+        .catch((err) => {
+            return res.status(500).json({
+                message: err.message,
+            });
+        });
+};
+/**
  * Retrieves the uploaded pdf file associated with the thesis submission.
  *
  * @param req.params.id is the ID of the thesis submission, NOT the ID of the file!

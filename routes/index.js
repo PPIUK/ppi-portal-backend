@@ -156,6 +156,7 @@ module.exports = (app) => {
         // .route('/thesis/:user_id') // FIXME: Do we need user_id path param?
         .post(app.oauth.authenticate(), thesisController.new)
         .get(thesisController.search);
+    router.route('/thesis/feed').get(thesisController.feed);
 
     router.route('/thesis/:id/pdf').get(thesisController.viewFile);
     router

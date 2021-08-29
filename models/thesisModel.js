@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const aggregatePaginate = require('mongoose-aggregate-paginate-v2');
 
 const thesisSchema = new mongoose.Schema({
     uploadedBy: {
@@ -68,5 +69,7 @@ const thesisSchema = new mongoose.Schema({
         required: false,
     },
 });
+
+thesisSchema.plugin(aggregatePaginate);
 
 mongoose.model('Thesis', thesisSchema, 'theses');
