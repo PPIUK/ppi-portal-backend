@@ -204,11 +204,11 @@ exports.registerNew = function (req, res) {
 
 /*
     POST /auth/set-password. Set password for the account.
-    Email must be a valid UK university email address (ends with 'ac.uk').
+    Email must be a valid UK university email address (ends with 'ac.uk' or '.edu').
     Verification email is sent afterwards.
  */
 exports.setPassword = function (req, res) {
-    if (!req.body.email.endsWith('ac.uk')) {
+    if (!req.body.email.endsWith('ac.uk')  || !req.body.email.endsWith('.edu')) {
         return res.status(400).json({
             message: 'Email is not a valid UK university email address.',
         });
@@ -252,10 +252,10 @@ exports.setPassword = function (req, res) {
 
 /*
     POST /auth/resend-verification. Resends verification email with the token.
-    Email must be a valid UK university email address (ends with 'ac.uk').
+    Email must be a valid UK university email address (ends with 'ac.uk' or '.edu').
  */
 exports.resendVerificationEmail = function (req, res) {
-    if (!req.body.email.endsWith('ac.uk')) {
+    if (!req.body.email.endsWith('ac.uk') || !req.body.email.endsWith('.edu')) {
         return res.status(400).json({
             message: 'Email is not a valid UK university email address.',
         });
