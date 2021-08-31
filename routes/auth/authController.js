@@ -331,7 +331,6 @@ exports.verifyEmail = function (req, res) {
 /*
     POST /auth/forgot
     Sends a token to email for password reset.
-    Currently will only send the email to the university email address.
  */
 exports.forgotPassword = function (req, res) {
     Profile.findOne({
@@ -367,6 +366,7 @@ exports.forgotPassword = function (req, res) {
                 from:
                     'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
                 to: profile.email, // list of receivers
+                cc: profile.emailPersonal,
                 subject: 'Reset your password', // Subject line
                 text: dedent`PPI UK Member Portal received your password reset request!
                 
