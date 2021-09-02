@@ -3,6 +3,7 @@ const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
+const VotingRound = mongoose.model('VotingRound');
 const VotingCampaign = mongoose.model('VotingCampaign');
 const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
@@ -233,6 +234,10 @@ exports.statistics = async function (req, res) {
  * See votingCampaignModel.js to see accepted fields.
  * @name POST_/api/voting/admin
  * @param req.body.campaignBannerFile is a file
+ * @param req.body.voteStart1
+ * @param req.body.voteEnd1
+ * @param req.body.voteStart2
+ * @param req.body.voteEnd2
  * @return res.body.id is the campaign id.
  */
 exports.new = function (req, res) {
@@ -248,6 +253,24 @@ exports.new = function (req, res) {
         if (req.file) {
             campaign.banner = mongoose.Types.ObjectId(req.file.id);
         }
+
+        let votingRounds = [];
+
+        if (req.body.voteStart1 && req.body.voteEnd1) {
+            let votingRound = new VotingRound();
+            votingRound.startDate = req.body.voteStart1;
+            votingRound.endDate = req.body.voteEnd1;
+            votingRounds.push(votingRound);
+        }
+
+        if (req.body.voteStart2 && req.body.voteEnd2) {
+            let votingRound = new VotingRound();
+            votingRound.startDate = req.body.voteStart2;
+            votingRound.endDate = req.body.voteEnd2;
+            votingRounds.push(votingRound);
+        }
+
+        campaign.voting = votingRounds;
 
         campaign.save(function (err) {
             if (err) {
@@ -270,6 +293,10 @@ exports.new = function (req, res) {
  * @name PATCH_/api/voting/admin/:campaignID
  * @param req.params.campaignID is the campaign ID to be updated
  * @param req.body.campaignBannerFile is a file
+ * @param req.body.voteStart1
+ * @param req.body.voteEnd1
+ * @param req.body.voteStart2
+ * @param req.body.voteEnd2
  * @return res.body.id is the campaign id.
  */
 exports.update = function (req, res) {
@@ -283,25 +310,73 @@ exports.update = function (req, res) {
         if (req.file) {
             req.body.banner = mongoose.Types.ObjectId(req.file.id);
         }
-        VotingCampaign.findByIdAndUpdate(
+
+        VotingCampaign.findById(
             req.params.campaignID,
-            req.body,
-            { useFindAndModify: false },
-            function (err, oldCampaign) {
+            { voting: 1 },
+            function (err, campaign) {
                 if (err) {
                     return res.status(400).json({
                         message: err.message,
                     });
-                } else if (oldCampaign === null) {
+                } else if (campaign === null) {
                     return res.status(404).json({
                         message: 'Campaign with that ID is not found',
                     });
-                } else {
-                    return res.status(200).json({
-                        message: 'Voting campaign updated!',
-                        id: req.params.campaignID,
-                    });
                 }
+
+                let votingRounds = campaign.voting;
+
+                if (req.body.voteStart1) {
+                    let votingRound = votingRounds[0];
+                    votingRound.startDate = req.body.voteStart1;
+                    votingRounds[0] = votingRound;
+                }
+                if (req.body.voteEnd1) {
+                    let votingRound = votingRounds[0];
+                    votingRound.endDate = req.body.voteEnd1;
+                    votingRounds[0] = votingRound;
+                }
+                if (req.body.voteStart2) {
+                    let votingRound =
+                        votingRounds.length > 1
+                            ? votingRounds[1]
+                            : new VotingRound();
+                    votingRound.startDate = req.body.voteStart2;
+                    votingRounds[1] = votingRound;
+                }
+                if (req.body.voteEnd2) {
+                    let votingRound =
+                        votingRounds.length > 1
+                            ? votingRounds[1]
+                            : new VotingRound();
+                    votingRound.startDate = req.body.voteEnd2;
+                    votingRounds[1] = votingRound;
+                }
+
+                // FIXME: validation needed?
+
+                VotingCampaign.findByIdAndUpdate(
+                    req.params.campaignID,
+                    { ...req.body, ...{ voting: votingRounds } },
+                    { useFindAndModify: false, runValidators: true },
+                    function (err, oldCampaign) {
+                        if (err) {
+                            return res.status(400).json({
+                                message: err.message,
+                            });
+                        } else if (oldCampaign === null) {
+                            return res.status(404).json({
+                                message: 'Campaign with that ID is not found',
+                            });
+                        } else {
+                            return res.status(200).json({
+                                message: 'Voting campaign updated!',
+                                id: req.params.campaignID,
+                            });
+                        }
+                    }
+                );
             }
         );
     });
@@ -374,7 +449,7 @@ exports.delete = function (req, res) {
 exports.view = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { 'voting.votes': 0 },
         function (err, campaign) {
             if (err) {
                 return res.status(500).json({
@@ -491,7 +566,7 @@ exports.newNomination = function (req, res) {
                 VotingCampaign.findByIdAndUpdate(
                     req.params.campaignID,
                     {
-                        $push: { candidates: candidate },
+                        $push: { candidatePool: candidate },
                     },
                     { useFindAndModify: false },
                     function (err, campaign) {
@@ -625,7 +700,7 @@ exports.updateNomination = function (req, res) {
                 VotingCampaign.findOneAndUpdate(
                     {
                         _id: req.params.campaignID,
-                        'candidates.candidateID': String(
+                        'candidatePool.candidateID': String(
                             res.locals.oauth.token.user._id
                         ),
                     },
@@ -651,7 +726,7 @@ exports.updateNomination = function (req, res) {
                             }
                         );
 
-                        let candidate = campaign.candidates.find(
+                        let candidate = campaign.candidatePool.find(
                             ({ candidateID }) =>
                                 String(candidateID) ===
                                 String(res.locals.oauth.token.user._id)
@@ -775,7 +850,7 @@ async function sendCompletedSubmissionEmail(candidateId, req, res) {
 exports.viewNomination = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { candidatePool: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(400).json({
@@ -787,12 +862,12 @@ exports.viewNomination = function (req, res) {
                     message: 'Invalid campaign ID.',
                 });
             }
-            if (campaign.candidates.length === 0) {
+            if (campaign.candidatePool.length === 0) {
                 return res.status(404).json({
                     message: 'There is no candidate yet for this campaign ID.',
                 });
             }
-            let candidate = campaign.candidates.find(
+            let candidate = campaign.candidatePool.find(
                 ({ candidateID }) => String(candidateID) === req.params.userID
             );
             if (!candidate) {
@@ -820,7 +895,7 @@ exports.viewNomination = function (req, res) {
 exports.viewSelfNomination = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { candidatePool: 0 },
         (err, campaign) => {
             if (err) {
                 return res.status(400).json({
@@ -832,12 +907,12 @@ exports.viewSelfNomination = function (req, res) {
                     message: 'Invalid campaign ID.',
                 });
             }
-            if (campaign.candidates.length === 0) {
+            if (campaign.candidatePool.length === 0) {
                 return res.status(404).json({
                     message: 'You have not nominated yourself in this campaign',
                 });
             }
-            let candidate = campaign.candidates.find(
+            let candidate = campaign.candidatePool.find(
                 ({ candidateID }) =>
                     String(candidateID) ===
                     String(res.locals.oauth.token.user._id)
@@ -864,7 +939,7 @@ exports.viewSelfNomination = function (req, res) {
 exports.viewCV = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -896,12 +971,12 @@ function findCandidateAndSendFile(
             message: 'Invalid campaign ID.',
         });
     }
-    if (campaign.candidates.length === 0) {
+    if (campaign.candidatePool.length === 0) {
         return res.status(404).json({
             message: 'There is no candidate yet for this campaign ID.',
         });
     }
-    let candidate = campaign.candidates.find(
+    let candidate = campaign.candidatePool.find(
         ({ candidateID }) => String(candidateID) === req.params.userID
     );
     if (!candidate) {
@@ -921,7 +996,7 @@ function findCandidateAndSendFile(
 exports.viewOrganisationExp = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -944,7 +1019,7 @@ exports.viewOrganisationExp = function (req, res) {
 exports.viewNotInOfficeStatement = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -967,7 +1042,7 @@ exports.viewNotInOfficeStatement = function (req, res) {
 exports.viewMotivationEssay = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
