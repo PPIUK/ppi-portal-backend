@@ -536,13 +536,19 @@ exports.newNomination = function (req, res) {
             {
                 _id: req.params.campaignID,
             },
+            {},
             function (err, campaign) {
                 if (err) {
                     return res.status(500).json({
                         message: err.message,
                     });
                 }
-                let candidateExists = campaign.candidates.find(
+                if (!campaign) {
+                    return res.status(404).json({
+                        message: 'Campaign ID does not exist',
+                    });
+                }
+                let candidateExists = campaign.candidatePool.find(
                     ({ candidateID }) =>
                         String(candidateID) === req.body.candidateID
                 );
@@ -640,20 +646,20 @@ exports.updateNomination = function (req, res) {
 
         if (req.files) {
             if ('cv' in req.files) {
-                updateQuery['candidates.$.cv'] = mongoose.Types.ObjectId(
+                updateQuery['candidatePool.$.cv'] = mongoose.Types.ObjectId(
                     req.files['cv'][0].id
                 );
                 toBeDeleted.push('cv');
             }
             if ('organisationExp' in req.files) {
                 updateQuery[
-                    'candidates.$.organisationExp'
+                    'candidatePool.$.organisationExp'
                 ] = mongoose.Types.ObjectId(req.files['organisationExp'][0].id);
                 toBeDeleted.push('organisationExp');
             }
             if ('notInOfficeStatement' in req.files) {
                 updateQuery[
-                    'candidates.$.notInOfficeStatement'
+                    'candidatePool.$.notInOfficeStatement'
                 ] = mongoose.Types.ObjectId(
                     req.files['notInOfficeStatement'][0].id
                 );
@@ -661,14 +667,14 @@ exports.updateNomination = function (req, res) {
             }
             if ('motivationEssay' in req.files) {
                 updateQuery[
-                    'candidates.$.motivationEssay'
+                    'candidatePool.$.motivationEssay'
                 ] = mongoose.Types.ObjectId(req.files['motivationEssay'][0].id);
                 toBeDeleted.push('motivationEssay');
             }
         }
 
         if (req.body.videoLink) {
-            updateQuery['candidates.$.videoLink'] = req.body.videoLink;
+            updateQuery['candidatePool.$.videoLink'] = req.body.videoLink;
         }
 
         VotingCampaign.findById(
@@ -752,9 +758,9 @@ exports.updateNomination = function (req, res) {
 
                         VotingCampaign.findById(
                             req.params.campaignID,
-                            { candidates: 1 },
+                            { candidatePool: 1 },
                             function (err, campaign) {
-                                let candidate = campaign.candidates.find(
+                                let candidate = campaign.candidatePool.find(
                                     ({ candidateID }) =>
                                         String(candidateID) ===
                                         String(res.locals.oauth.token.user._id)
@@ -895,7 +901,7 @@ exports.viewNomination = function (req, res) {
 exports.viewSelfNomination = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidatePool: 0 },
+        { candidatePool: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(400).json({
