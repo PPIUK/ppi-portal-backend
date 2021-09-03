@@ -877,6 +877,11 @@ exports.viewNomination = function (req, res) {
                 ({ candidateID }) => String(candidateID) === req.params.userID
             );
             if (!candidate) {
+                candidate = campaign.candidatePool.find(
+                    ({ _id }) => String(_id) === req.params.userID
+                );
+            }
+            if (!candidate) {
                 return res.status(404).json({
                     message: 'Candidate ID not found in this campaign.',
                 });
@@ -986,6 +991,11 @@ function findCandidateAndSendFile(
         ({ candidateID }) => String(candidateID) === req.params.userID
     );
     if (!candidate) {
+        candidate = campaign.candidatePool.find(
+            ({ _id }) => String(_id) === req.params.userID
+        );
+    }
+    if (!candidate) {
         return res.status(404).json({
             message: 'Candidate ID not found in this campaign.',
         });
@@ -1058,6 +1068,64 @@ exports.viewMotivationEssay = function (req, res) {
                 'motivationEssay',
                 'campaigncandidatefiles'
             );
+        }
+    );
+};
+
+/**
+ * Select candidates to compete in the voting round.
+ * @name POST_/api/voting/:campaignID/candidates/:round
+ * @param req.params.campaignID is the campaign ID
+ * @param req.params.round is the voting round
+ * @param req.body.candidates is the list of candidate IDs or candidate schema IDs (the latter is the one being saved)
+ */
+exports.selectCandidates = function (req, res) {
+    VotingCampaign.findById(
+        req.params.campaignID,
+        { candidatePool: 1, voting: 1 },
+        function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Invalid campaign ID',
+                });
+            }
+
+            let candidates = new Set();
+            for (let id of req.body.candidates) {
+                let candidate = campaign.candidatePool.find(
+                    ({ candidateID }) => String(candidateID) === id
+                );
+                if (!candidate) {
+                    candidate = campaign.candidatePool.find(
+                        ({ _id }) => String(_id) === id
+                    );
+                }
+                if (!candidate) {
+                    return res.status(404).json({
+                        message: `Candidate ID ${id} not found in this campaign.`,
+                    });
+                }
+                candidates.add(candidate._id);
+            }
+            candidates = Array.from(candidates);
+
+            if (campaign.voting.length <= req.params.round) {
+                return res.status(400).json({
+                    message: `There is no voting round ${req.params.round} in this campaign`,
+                });
+            }
+
+            campaign.voting[req.params.round - 1].candidates = candidates;
+            campaign.save().then(() => {
+                return res.status(200).json({
+                    message: 'Candidates selected',
+                });
+            });
         }
     );
 };
