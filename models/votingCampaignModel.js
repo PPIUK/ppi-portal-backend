@@ -54,6 +54,7 @@ const votingRoundSchema = new mongoose.Schema({
             type: mongoose.Schema.ObjectId,
             ref: 'VotingCandidate',
         },
+        // of: String,
         default: {},
     },
 });

@@ -350,13 +350,13 @@ module.exports = (app) => {
             votingCampaignController.viewMotivationEssay
         );
     router
-        .route('/voting/:campaignID/vote/:userID')
+        .route('/voting/:campaignID/vote/:round/:candidateID')
         .post(app.oauth.authenticate(), votingCampaignController.vote);
     router
         .route('/voting/:campaignID/eligibility')
         .get(app.oauth.authenticate(), votingCampaignController.eligibility);
     router
-        .route('/voting/:campaignID/hasVoted')
+        .route('/voting/:campaignID/hasVoted/:round')
         .get(app.oauth.authenticate(), votingCampaignController.hasVoted);
     // Export API routes
     return router;

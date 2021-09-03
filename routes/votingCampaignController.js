@@ -80,9 +80,9 @@ exports.archived = function (req, res) {
     let now = new Date();
     VotingCampaign.find(
         {
-            voteEnd: { $lte: now },
+            $expr: { $lte: [{ $arrayElemAt: ['$voting.endDate', -1] }, now] },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -108,9 +108,9 @@ exports.active = function (req, res) {
     VotingCampaign.find(
         {
             nominateStart: { $lte: now },
-            voteEnd: { $gt: now },
+            $expr: { $gt: [{ $arrayElemAt: ['$voting.endDate', -1] }, now] },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -138,7 +138,7 @@ exports.activeNominate = function (req, res) {
             nominateStart: { $lte: now },
             nominateEnd: { $gt: now },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -164,8 +164,13 @@ exports.activeVote = function (req, res) {
     let now = new Date();
     VotingCampaign.find(
         {
-            voteStart: { $lte: now },
-            voteEnd: { $gt: now },
+            $expr: {
+                $gt: [{ $arrayElemAt: ['$voting.endDate', -1] }, now],
+            },
+            // eslint-disable-next-line no-dupe-keys
+            $expr: {
+                $lte: [{ $arrayElemAt: ['$voting.startDate', -1] }, now],
+            },
         },
         { 'candidates.votes': 0 }
     )
@@ -184,48 +189,51 @@ exports.activeVote = function (req, res) {
 };
 
 exports.statistics = async function (req, res) {
-    VotingCampaign.findById(req.params.id, { candidates: 1 })
-        .populate('candidates.votes', 'branch')
-        .exec(function (err, campaign) {
-            if (err) {
-                return res.status(500).json({
-                    message: err.message,
-                });
-            }
-            if (!campaign) {
-                return res.status(404).json({
-                    message: 'Campaign not found',
-                });
-            }
-            let candidates = campaign.candidates;
-            let votes = candidates.map((cand) => {
-                let branchDistribution = cand.votes.reduce((total, value) => {
-                    total[value.branch] = (total[value.branch] || 0) + 1;
-                    return total;
-                }, {});
-                return {
-                    candidateID: cand.candidateID,
-                    totalVotes: cand.votes.length,
-                    branchDistribution: branchDistribution,
-                };
+    VotingCampaign.findById(req.params.id, { voting: 1 }).exec(async function (
+        err,
+        campaign
+    ) {
+        if (err) {
+            return res.status(500).json({
+                message: err.message,
             });
-
-            let all_votes = [].concat.apply(
-                [],
-                candidates.map((cand) => cand.votes)
-            );
-            let branchDistribution = all_votes.reduce((total, value) => {
-                total[value.branch] = (total[value.branch] || 0) + 1;
+        }
+        if (!campaign) {
+            return res.status(404).json({
+                message: 'Campaign not found',
+            });
+        }
+        let statistics = [];
+        for (let round of campaign.voting) {
+            let roundStatistics = {};
+            const votes = Array.from(round.votes.values());
+            roundStatistics.overall = votes.reduce((total, value) => {
+                total[value] = (total[value] || 0) + 1;
                 return total;
             }, {});
-            return res.status(200).json({
-                message: 'Campaign statistics returned.',
-                data: {
-                    candidates: votes,
-                    branchDistribution: branchDistribution,
-                },
-            });
+
+            // const voterIds = Array.from(round.votes.keys()).map((id) =>
+            //     mongoose.Types.ObjectId(id)
+            // );
+            // let profiles = await Profile.find(
+            //     {
+            //         _id: { $in: voterIds },
+            //     },
+            //     { _id: 1, branch: 1 }
+            // );
+            // FIXME: how to count branch distribution
+            // const branchVotes = profiles.map((profile, i) => [
+            //     profile.branch,
+            //     votes[i],
+            // ]);
+
+            statistics.push(roundStatistics);
+        }
+        return res.status(200).json({
+            message: 'Campaign statistics returned.',
+            data: statistics,
         });
+    });
 };
 
 /**
@@ -1186,34 +1194,38 @@ exports.eligibility = async function (req, res) {
 
 /**
  * Checks if caller has voted in the specified campaign.
- * @name POST_/api/voting/:campaignID/hasVoted
+ * @name GET_/api/voting/:campaignID/hasVoted/:round
  * @param req.params.campaignID is the campaign ID
+ * @param req.params.round is the voting round
  * @return res.body.data is true or false
  */
 exports.hasVoted = function (req, res) {
     let voterId = String(res.locals.oauth.token.user._id);
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { voting: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(500).json({
                     message: err.message,
                 });
             }
-            let all_voters = [].concat.apply(
-                [],
-                campaign.candidates.map((cand) => {
-                    return cand.votes;
-                })
-            );
-            if (all_voters.some((v) => v.toString() === voterId)) {
-                return res.status(200).json({
-                    data: true,
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Invalid campaign ID',
                 });
             }
+            if (campaign.voting.length <= req.params.round) {
+                return res.status(400).json({
+                    message: `There is no voting round ${req.params.round} in this campaign`,
+                });
+            }
+            const hasVoted = campaign.voting[req.params.round - 1].votes.has(
+                voterId
+            );
+
             return res.status(200).json({
-                data: false,
+                data: hasVoted,
             });
         }
     );
@@ -1221,9 +1233,10 @@ exports.hasVoted = function (req, res) {
 
 /**
  * Votes for the specified candidate in the specified campaign.
- * @name POST_/api/voting/:campaignID/vote/:userID
+ * @name POST_/api/voting/:campaignID/vote/:round/:candidateID
  * @param req.params.campaignID is the campaign ID
- * @param req.params.userID is the candidate ID
+ * @param req.params.round is the voting round
+ * @param req.params.candidateID is the candidate schema ID, NOT candidate user ID
  */
 exports.vote = async function (req, res) {
     try {
@@ -1253,13 +1266,19 @@ exports.vote = async function (req, res) {
                 message: 'Campaign is not found',
             });
         }
+        const round = req.params.round;
+        if (campaign.voting.length <= round) {
+            return res.status(400).json({
+                message: `There is no voting round ${round} in this campaign`,
+            });
+        }
         let current = new Date();
-        if (current < new Date(campaign.voteStart)) {
+        if (current < new Date(campaign.voting[round - 1].startDate)) {
             return res.status(403).json({
                 message: 'The voting phase has not started.',
             });
         }
-        if (current > new Date(campaign.voteEnd)) {
+        if (current > new Date(campaign.voting[round - 1].endDate)) {
             return res.status(403).json({
                 message: 'The voting phase has ended.',
             });
@@ -1282,36 +1301,23 @@ exports.vote = async function (req, res) {
                     'You are not eligible to vote due to your course start date.',
             });
         }
-        let all_voters = [].concat.apply(
-            [],
-            campaign.candidates.map((cand) => {
-                return cand.votes;
-            })
-        );
-        if (all_voters.some((v) => v.toString() === voterId)) {
+        if (campaign.voting[round - 1].votes.has(voterId)) {
             return res.status(400).json({
                 message: 'You have already voted in this campaign',
             });
         }
-        let candidate = campaign.candidates.find(
-            ({ candidateID }) => String(candidateID) === req.params.userID
-        );
-        let candidateIndex = campaign.candidates.findIndex(
-            ({ candidateID }) => String(candidateID) === req.params.userID
-        );
-        if (!candidate) {
+
+        if (
+            !campaign.voting[round - 1].candidates.includes(
+                req.params.candidateID
+            )
+        ) {
             return res.status(404).json({
                 message: 'Candidate ID not found in this campaign.',
             });
         }
-        if (candidate.votes.includes(voterId)) {
-            return res.status(400).json({
-                message: 'You have already voted in this campaign',
-            });
-        }
-        candidate.votes.push(mongoose.Types.ObjectId(voterId));
-        campaign.candidates[candidateIndex] = candidate;
 
+        campaign.voting[round - 1].votes.set(voterId, req.params.candidateID);
         let savedCampaign = await campaign.save();
         if (savedCampaign) {
             return res.status(200).json({
