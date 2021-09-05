@@ -1175,11 +1175,12 @@ exports.eligibility = async function (req, res) {
             data: false,
         });
     }
+
     if (
-        //TODO: how to decide if the Masters course is a 1 year course or not???
         profile.degreeLevel.includes('S2') &&
         !profile.degreeLevel.includes('S1') && //skipping integrated masters
         campaign.voterMastersCutOffStartDate &&
+        (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <= 365 && //TODO: how to decide if the Masters course is a 1 year course or not???
         profile.startDate < campaign.voterMastersCutOffStartDate
     ) {
         return res.status(200).json({
@@ -1420,6 +1421,8 @@ exports.vote = async function (req, res) {
             profile.degreeLevel.includes('S2') &&
             !profile.degreeLevel.includes('S1') && //skipping integrated masters
             campaign.voterMastersCutOffStartDate &&
+            (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <=
+                365 && //TODO: how to decide if the Masters course is a 1 year course or not???
             profile.startDate < campaign.voterMastersCutOffStartDate
         ) {
             return res.status(403).json({
