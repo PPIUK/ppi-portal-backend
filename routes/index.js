@@ -306,6 +306,13 @@ module.exports = (app) => {
             votingCampaignController.selectCandidates
         );
     router
+        .route('/voting/admin/:campaignID/voters')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('readAny'),
+            votingCampaignController.eligibleList
+        );
+    router
         .route('/voting/:campaignID')
         .get(app.oauth.authenticate(), votingCampaignController.view);
     router

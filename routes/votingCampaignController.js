@@ -1192,6 +1192,132 @@ exports.eligibility = async function (req, res) {
     });
 };
 
+exports.eligibleList = function (req, res) {
+    VotingCampaign.findById(
+        req.params.campaignID,
+        { voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
+        function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign is not found',
+                });
+            }
+
+            let aggregationPipeline = [
+                {
+                    $match: {
+                        roles: {
+                            $in: ['verified'],
+                        },
+                    },
+                },
+            ];
+            if (campaign.voterCutOffEndDate) {
+                aggregationPipeline.push({
+                    $match: {
+                        endDate: {
+                            $gt: new Date(campaign.voterCutOffEndDate),
+                        },
+                    },
+                });
+            }
+            if (campaign.voterMastersCutOffStartDate) {
+                aggregationPipeline.push({
+                    $project: {
+                        _id: 1,
+                        fullName: 1,
+                        degreeLevel: 1,
+                        branch: 1,
+                        startDate: 1,
+                        endDate: 1,
+                        courseLength: {
+                            $divide: [
+                                {
+                                    $subtract: ['$endDate', '$startDate'],
+                                },
+                                1000 * 60 * 60 * 24,
+                            ],
+                        },
+                    },
+                });
+                aggregationPipeline.push({
+                    $match: {
+                        $or: [
+                            {
+                                degreeLevel: {
+                                    $in: [
+                                        new RegExp('A-Level'),
+                                        new RegExp('S1'),
+                                        new RegExp('S3'),
+                                    ],
+                                },
+                            },
+                            {
+                                $and: [
+                                    {
+                                        degreeLevel: new RegExp('S2'),
+                                    },
+                                    {
+                                        $or: [
+                                            {
+                                                courseLength: {
+                                                    $gt: 365,
+                                                },
+                                            },
+                                            {
+                                                $and: [
+                                                    {
+                                                        courseLength: {
+                                                            $lte: 365,
+                                                        },
+                                                    },
+                                                    {
+                                                        startDate: {
+                                                            $gte: new Date(
+                                                                campaign.voterMastersCutOffStartDate
+                                                            ),
+                                                        },
+                                                    },
+                                                ],
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                });
+            }
+            aggregationPipeline.push({
+                $project: {
+                    _id: 1,
+                    fullName: 1,
+                    degreeLevel: 1,
+                    branch: 1,
+                    startDate: 1,
+                    endDate: 1,
+                },
+            });
+            Profile.aggregate(aggregationPipeline, function (err, profiles) {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(200).json({
+                    message: 'Voter list received successfully',
+                    data: profiles,
+                });
+            });
+        }
+    );
+};
+
 /**
  * Checks if caller has voted in the specified campaign.
  * @name GET_/api/voting/:campaignID/hasVoted/:round
