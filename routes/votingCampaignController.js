@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
+const dfd = require('danfojs-node');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
 const VotingRound = mongoose.model('VotingRound');
@@ -207,25 +208,64 @@ exports.statistics = async function (req, res) {
         for (let round of campaign.voting) {
             let roundStatistics = {};
             const votes = Array.from(round.votes.values());
-            roundStatistics.overall = votes.reduce((total, value) => {
+            const overallCount = votes.reduce((total, value) => {
                 total[value] = (total[value] || 0) + 1;
                 return total;
             }, {});
 
-            // const voterIds = Array.from(round.votes.keys()).map((id) =>
-            //     mongoose.Types.ObjectId(id)
-            // );
-            // let profiles = await Profile.find(
-            //     {
-            //         _id: { $in: voterIds },
-            //     },
-            //     { _id: 1, branch: 1 }
-            // );
-            // FIXME: how to count branch distribution
-            // const branchVotes = profiles.map((profile, i) => [
-            //     profile.branch,
-            //     votes[i],
-            // ]);
+            let overallCountArray = [];
+            for (let cand in overallCount) {
+                overallCountArray.push({
+                    candidateID: cand,
+                    votes: overallCount[cand],
+                });
+            }
+            roundStatistics.overall = overallCountArray;
+
+            const voterIds = Array.from(round.votes.keys()).map((id) =>
+                mongoose.Types.ObjectId(id)
+            );
+            let profiles = await Profile.find(
+                {
+                    _id: { $in: voterIds },
+                },
+                { _id: 1, branch: 1 }
+            );
+            profiles = profiles.map((profile, i) => {
+                return {
+                    id: String(profile._id),
+                    branch: profile.branch,
+                    candidateID: String(votes[i]),
+                };
+            });
+
+            if (profiles.length > 0) {
+                const df = new dfd.DataFrame(profiles);
+
+                let grp = df.groupby(['candidateID', 'branch']);
+                grp.agg({ id: 'count' })
+                    .rename({ mapper: { id_count: 'votes' } })
+                    .to_json()
+                    .then((json) => {
+                        const data = JSON.parse(json);
+
+                        roundStatistics.candidateToBranch = reshapeStatistics(
+                            data,
+                            'candidateID',
+                            'branch'
+                        );
+                        roundStatistics.branchToCandidate = reshapeStatistics(
+                            data,
+                            'branch',
+                            'candidateID'
+                        );
+                    })
+                    .catch((err) => {
+                        return res.status(500).json({
+                            message: err,
+                        });
+                    });
+            }
 
             statistics.push(roundStatistics);
         }
@@ -235,6 +275,27 @@ exports.statistics = async function (req, res) {
         });
     });
 };
+
+function reshapeStatistics(data, outerKey, childrenKey) {
+    const statsObj = {};
+    data.forEach((datum) => {
+        let single = {};
+        if (datum[outerKey] in statsObj) {
+            single = statsObj[datum[outerKey]];
+        }
+        single[datum[childrenKey]] = datum.votes;
+        statsObj[datum[outerKey]] = single;
+    });
+
+    let statsArray = [];
+    for (let single in statsObj) {
+        statsArray.push({
+            ...{ [outerKey]: single },
+            ...statsObj[single],
+        });
+    }
+    return statsArray;
+}
 
 /**
  * Creates a new voting campaign.
