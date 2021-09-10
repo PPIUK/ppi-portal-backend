@@ -192,7 +192,7 @@ exports.activeVote = function (req, res) {
 exports.votersStatistics = async function (req, res) {
     VotingCampaign.findById(
         req.params.id,
-        { voting: 1 },
+        { voting: 1, voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
         async function (err, campaign) {
             if (err) {
                 return res.status(500).json({
@@ -215,12 +215,15 @@ exports.votersStatistics = async function (req, res) {
                 const aggregateResult = await Profile.aggregate(
                     aggregationPipeline
                 );
-                roundStatistics.votersCount = {
-                    hasVoted: round.votes.size,
-                    hasNotVoted:
-                        aggregateResult[0].eligibleVotersCount -
-                        round.votes.size,
-                };
+                roundStatistics.votersCount = [
+                    { name: 'has voted', value: round.votes.size },
+                    {
+                        name: 'has not voted',
+                        value:
+                            aggregateResult[0].eligibleVotersCount -
+                            round.votes.size,
+                    },
+                ];
 
                 const voterIds = Array.from(round.votes.keys()).map((id) =>
                     mongoose.Types.ObjectId(id)
@@ -243,7 +246,7 @@ exports.votersStatistics = async function (req, res) {
                 let branchesCountArray = [];
                 for (let branch in branchesCount) {
                     branchesCountArray.push({
-                        branch: branch,
+                        name: branch,
                         voters: branchesCount[branch],
                     });
                 }
@@ -1378,11 +1381,13 @@ function getEligibleListPipeline(campaign) {
                 $or: [
                     {
                         degreeLevel: {
-                            $in: [
-                                new RegExp('A-Level'),
-                                new RegExp('S1'),
-                                new RegExp('S3'),
-                            ],
+                            // TODO: decide!
+                            // $in: [
+                            //     new RegExp('A-Level'),
+                            //     new RegExp('S1'),
+                            //     new RegExp('S3'),
+                            // ],
+                            $nin: [new RegExp('S2')],
                         },
                     },
                     {
@@ -1439,7 +1444,6 @@ exports.eligibleList = function (req, res) {
                     message: 'Campaign is not found',
                 });
             }
-
             let aggregationPipeline = getEligibleListPipeline(campaign);
             aggregationPipeline.push({
                 $project: {
@@ -1563,6 +1567,18 @@ exports.vote = async function (req, res) {
                     'You are not eligible to vote due to your course end date.',
             });
         }
+        // TODO: decide if the below logic is needed!
+        // if (
+        //     !profile.degreeLevel.includes('S1') &&
+        //     !profile.degreeLevel.includes('S2') &&
+        //     !profile.degreeLevel.includes('S3') &&
+        //     !profile.degreeLevel.includes('A-Level')
+        // ) {
+        //     return res.status(403).json({
+        //         message:
+        //             'You are not eligible to vote due to your degree level.',
+        //     });
+        // }
         if (
             //TODO: how to decide if the Masters course is a 1 year course or not???
             profile.degreeLevel.includes('S2') &&
