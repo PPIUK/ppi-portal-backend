@@ -278,7 +278,7 @@ module.exports = (app) => {
         .get(votingCampaignController.activeVote);
     router
         .route('/voting/pubstats/:id')
-        .get(votingCampaignController.statistics);
+        .get(votingCampaignController.votersStatistics);
     router
         .route('/voting/admin')
         .post(
@@ -311,6 +311,13 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             votingCampaignController.grantAccess('readAny'),
             votingCampaignController.eligibleList
+        );
+    router
+        .route('/voting/admin/:campaignID/stats')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('readAny'),
+            votingCampaignController.statistics
         );
     router
         .route('/voting/:campaignID')

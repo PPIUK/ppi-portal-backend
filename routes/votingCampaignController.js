@@ -189,94 +189,168 @@ exports.activeVote = function (req, res) {
         });
 };
 
-exports.statistics = async function (req, res) {
-    VotingCampaign.findById(req.params.id, { voting: 1 }).exec(async function (
-        err,
-        campaign
-    ) {
-        if (err) {
-            return res.status(500).json({
-                message: err.message,
-            });
-        }
-        if (!campaign) {
-            return res.status(404).json({
-                message: 'Campaign not found',
-            });
-        }
-        let statistics = [];
-        for (let round of campaign.voting) {
-            let roundStatistics = {};
-            const votes = Array.from(round.votes.values());
-            const overallCount = votes.reduce((total, value) => {
-                total[value] = (total[value] || 0) + 1;
-                return total;
-            }, {});
-
-            let overallCountArray = [];
-            for (let cand in overallCount) {
-                overallCountArray.push({
-                    candidateID: cand,
-                    votes: overallCount[cand],
+exports.votersStatistics = async function (req, res) {
+    VotingCampaign.findById(
+        req.params.id,
+        { voting: 1 },
+        async function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
                 });
             }
-            roundStatistics.overall = overallCountArray;
-
-            const voterIds = Array.from(round.votes.keys()).map((id) =>
-                mongoose.Types.ObjectId(id)
-            );
-            let profiles = await Profile.find(
-                {
-                    _id: { $in: voterIds },
-                },
-                { _id: 1, branch: 1 }
-            );
-            profiles = profiles.map((profile, i) => {
-                return {
-                    id: String(profile._id),
-                    branch: profile.branch,
-                    candidateID: String(votes[i]),
-                };
-            });
-
-            if (profiles.length > 0) {
-                const df = new dfd.DataFrame(profiles);
-
-                let grp = df.groupby(['candidateID', 'branch']);
-                grp.agg({ id: 'count' })
-                    .rename({ mapper: { id_count: 'votes' } })
-                    .to_json()
-                    .then((json) => {
-                        const data = JSON.parse(json);
-
-                        roundStatistics.candidateToBranch = reshapeStatistics(
-                            data,
-                            'candidateID',
-                            'branch'
-                        );
-                        roundStatistics.branchToCandidate = reshapeStatistics(
-                            data,
-                            'branch',
-                            'candidateID'
-                        );
-                    })
-                    .catch((err) => {
-                        return res.status(500).json({
-                            message: err,
-                        });
-                    });
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
             }
 
-            statistics.push(roundStatistics);
+            let statistics = [];
+            for (let round of campaign.voting) {
+                let roundStatistics = {};
+                let aggregationPipeline = getEligibleListPipeline(campaign);
+                aggregationPipeline.push({
+                    $count: 'eligibleVotersCount',
+                });
+                const aggregateResult = await Profile.aggregate(
+                    aggregationPipeline
+                );
+                roundStatistics.votersCount = {
+                    hasVoted: round.votes.size,
+                    hasNotVoted:
+                        aggregateResult[0].eligibleVotersCount -
+                        round.votes.size,
+                };
+
+                const voterIds = Array.from(round.votes.keys()).map((id) =>
+                    mongoose.Types.ObjectId(id)
+                );
+                let profiles = await Profile.find(
+                    {
+                        _id: { $in: voterIds },
+                    },
+                    { _id: 1, branch: 1 }
+                );
+                const branches = profiles.map((profile) => {
+                    return profile.branch;
+                });
+
+                const branchesCount = branches.reduce((total, value) => {
+                    total[value] = (total[value] || 0) + 1;
+                    return total;
+                }, {});
+
+                let branchesCountArray = [];
+                for (let branch in branchesCount) {
+                    branchesCountArray.push({
+                        branch: branch,
+                        voters: branchesCount[branch],
+                    });
+                }
+                roundStatistics.branchesCount = branchesCountArray;
+                statistics.push(roundStatistics);
+            }
+
+            return res.status(200).json({
+                message: 'Campaign voters statistics returned.',
+                data: statistics,
+            });
         }
-        return res.status(200).json({
-            message: 'Campaign statistics returned.',
-            data: statistics,
-        });
-    });
+    );
 };
 
-function reshapeStatistics(data, outerKey, childrenKey) {
+exports.statistics = async function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, { voting: 1 }).exec(
+        async function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
+            }
+            let statistics = [];
+            for (let round of campaign.voting) {
+                let roundStatistics = {};
+                const candidates = round.candidates;
+                const votes = Array.from(round.votes.values());
+                const overallCount = votes.reduce((total, value) => {
+                    total[value] = (total[value] || 0) + 1;
+                    return total;
+                }, {});
+
+                let overallCountArray = [];
+                for (let cand in overallCount) {
+                    overallCountArray[candidates.indexOf(cand)] = {
+                        candidateID: cand,
+                        votes: overallCount[cand],
+                    };
+                }
+                if (overallCountArray.length > 0) {
+                    roundStatistics.overall = overallCountArray;
+                }
+
+                const voterIds = Array.from(round.votes.keys()).map((id) =>
+                    mongoose.Types.ObjectId(id)
+                );
+                let profiles = await Profile.find(
+                    {
+                        _id: { $in: voterIds },
+                    },
+                    { _id: 1, branch: 1 }
+                );
+                profiles = profiles.map((profile, i) => {
+                    return {
+                        id: String(profile._id),
+                        branch: profile.branch,
+                        candidateID: String(votes[i]),
+                    };
+                });
+
+                if (profiles.length > 0) {
+                    const df = new dfd.DataFrame(profiles);
+
+                    let grp = df.groupby(['candidateID', 'branch']);
+                    grp.agg({ id: 'count' })
+                        .rename({ mapper: { id_count: 'votes' } })
+                        .to_json()
+                        .then((json) => {
+                            const data = JSON.parse(json);
+
+                            roundStatistics.candidateToBranch = reshapeStatistics(
+                                data,
+                                'candidateID',
+                                'branch',
+                                candidates
+                            );
+                            roundStatistics.branchToCandidate = reshapeStatistics(
+                                data,
+                                'branch',
+                                'candidateID',
+                                candidates
+                            );
+                        })
+                        .catch((err) => {
+                            return res.status(500).json({
+                                message: err,
+                            });
+                        });
+                }
+
+                statistics.push(roundStatistics);
+            }
+            return res.status(200).json({
+                message: 'Campaign statistics returned.',
+                data: statistics,
+            });
+        }
+    );
+};
+
+function reshapeStatistics(data, outerKey, childrenKey, candidates) {
     const statsObj = {};
     data.forEach((datum) => {
         let single = {};
@@ -289,10 +363,17 @@ function reshapeStatistics(data, outerKey, childrenKey) {
 
     let statsArray = [];
     for (let single in statsObj) {
-        statsArray.push({
-            ...{ [outerKey]: single },
-            ...statsObj[single],
-        });
+        if (outerKey === 'candidateID') {
+            statsArray[candidates.indexOf(single)] = {
+                ...{ [outerKey]: single },
+                ...statsObj[single],
+            };
+        } else {
+            statsArray.push({
+                ...{ [outerKey]: single },
+                ...statsObj[single],
+            });
+        }
     }
     return statsArray;
 }
@@ -1254,6 +1335,95 @@ exports.eligibility = async function (req, res) {
     });
 };
 
+function getEligibleListPipeline(campaign) {
+    let aggregationPipeline = [
+        {
+            $match: {
+                roles: {
+                    $in: ['verified'],
+                },
+            },
+        },
+    ];
+    if (campaign.voterCutOffEndDate) {
+        aggregationPipeline.push({
+            $match: {
+                endDate: {
+                    $gt: new Date(campaign.voterCutOffEndDate),
+                },
+            },
+        });
+    }
+    if (campaign.voterMastersCutOffStartDate) {
+        aggregationPipeline.push({
+            $project: {
+                _id: 1,
+                fullName: 1,
+                degreeLevel: 1,
+                branch: 1,
+                startDate: 1,
+                endDate: 1,
+                courseLength: {
+                    $divide: [
+                        {
+                            $subtract: ['$endDate', '$startDate'],
+                        },
+                        1000 * 60 * 60 * 24,
+                    ],
+                },
+            },
+        });
+        aggregationPipeline.push({
+            $match: {
+                $or: [
+                    {
+                        degreeLevel: {
+                            $in: [
+                                new RegExp('A-Level'),
+                                new RegExp('S1'),
+                                new RegExp('S3'),
+                            ],
+                        },
+                    },
+                    {
+                        $and: [
+                            {
+                                degreeLevel: new RegExp('S2'),
+                            },
+                            {
+                                $or: [
+                                    {
+                                        courseLength: {
+                                            $gt: 365,
+                                        },
+                                    },
+                                    {
+                                        $and: [
+                                            {
+                                                courseLength: {
+                                                    $lte: 365,
+                                                },
+                                            },
+                                            {
+                                                startDate: {
+                                                    $gte: new Date(
+                                                        campaign.voterMastersCutOffStartDate
+                                                    ),
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        });
+    }
+    return aggregationPipeline;
+}
+
 exports.eligibleList = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
@@ -1270,91 +1440,7 @@ exports.eligibleList = function (req, res) {
                 });
             }
 
-            let aggregationPipeline = [
-                {
-                    $match: {
-                        roles: {
-                            $in: ['verified'],
-                        },
-                    },
-                },
-            ];
-            if (campaign.voterCutOffEndDate) {
-                aggregationPipeline.push({
-                    $match: {
-                        endDate: {
-                            $gt: new Date(campaign.voterCutOffEndDate),
-                        },
-                    },
-                });
-            }
-            if (campaign.voterMastersCutOffStartDate) {
-                aggregationPipeline.push({
-                    $project: {
-                        _id: 1,
-                        fullName: 1,
-                        degreeLevel: 1,
-                        branch: 1,
-                        startDate: 1,
-                        endDate: 1,
-                        courseLength: {
-                            $divide: [
-                                {
-                                    $subtract: ['$endDate', '$startDate'],
-                                },
-                                1000 * 60 * 60 * 24,
-                            ],
-                        },
-                    },
-                });
-                aggregationPipeline.push({
-                    $match: {
-                        $or: [
-                            {
-                                degreeLevel: {
-                                    $in: [
-                                        new RegExp('A-Level'),
-                                        new RegExp('S1'),
-                                        new RegExp('S3'),
-                                    ],
-                                },
-                            },
-                            {
-                                $and: [
-                                    {
-                                        degreeLevel: new RegExp('S2'),
-                                    },
-                                    {
-                                        $or: [
-                                            {
-                                                courseLength: {
-                                                    $gt: 365,
-                                                },
-                                            },
-                                            {
-                                                $and: [
-                                                    {
-                                                        courseLength: {
-                                                            $lte: 365,
-                                                        },
-                                                    },
-                                                    {
-                                                        startDate: {
-                                                            $gte: new Date(
-                                                                campaign.voterMastersCutOffStartDate
-                                                            ),
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                        ],
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                });
-            }
+            let aggregationPipeline = getEligibleListPipeline(campaign);
             aggregationPipeline.push({
                 $project: {
                     _id: 1,
