@@ -614,7 +614,7 @@ exports.newRound = function (req, res) {
         campaign
             .save()
             .then(() => res.json({ data: newRoundID }))
-            .catch(() => res.sendStatus(500));
+            .catch((err) => res.status(500).json({ data: err }));
     });
 };
 
@@ -647,7 +647,7 @@ exports.updateRound = function (req, res) {
         campaign
             .save()
             .then((newCampaign) => res.json({ data: newCampaign }))
-            .catch(() => res.sendStatus(500));
+            .catch((err) => res.status(500).json({ data: err }));
     });
 };
 

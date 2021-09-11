@@ -319,7 +319,7 @@ module.exports = (app) => {
             votingCampaignController.deleteRound
         );
     router
-        .route('/voting/admin/:campaignID/candidates/round/:round/candidates')
+        .route('/voting/admin/:campaignID/round/:round/candidates')
         .post(
             app.oauth.authenticate(),
             votingCampaignController.grantAccess('createAny'),
