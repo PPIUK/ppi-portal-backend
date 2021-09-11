@@ -299,7 +299,27 @@ module.exports = (app) => {
             votingCampaignController.delete
         );
     router
-        .route('/voting/admin/:campaignID/candidates/:round')
+        .route('/voting/admin/:campaignID/round')
+        .post(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('createAny'),
+            votingCampaignController.newRound
+        );
+    router
+        .route('/voting/admin/:campaignID/round/:roundID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewRound)
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('updateAny'),
+            votingCampaignController.updateRound
+        )
+        .delete(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('deleteAny'),
+            votingCampaignController.deleteRound
+        );
+    router
+        .route('/voting/admin/:campaignID/candidates/round/:round/candidates')
         .post(
             app.oauth.authenticate(),
             votingCampaignController.grantAccess('createAny'),

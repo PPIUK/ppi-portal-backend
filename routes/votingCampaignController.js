@@ -387,10 +387,6 @@ function reshapeStatistics(data, outerKey, childrenKey, candidates) {
  * See votingCampaignModel.js to see accepted fields.
  * @name POST_/api/voting/admin
  * @param req.body.campaignBannerFile is a file
- * @param req.body.voteStart1
- * @param req.body.voteEnd1
- * @param req.body.voteStart2
- * @param req.body.voteEnd2
  * @return res.body.id is the campaign id.
  */
 exports.new = function (req, res) {
@@ -406,24 +402,6 @@ exports.new = function (req, res) {
         if (req.file) {
             campaign.banner = mongoose.Types.ObjectId(req.file.id);
         }
-
-        let votingRounds = [];
-
-        if (req.body.voteStart1 && req.body.voteEnd1) {
-            let votingRound = new VotingRound();
-            votingRound.startDate = req.body.voteStart1;
-            votingRound.endDate = req.body.voteEnd1;
-            votingRounds.push(votingRound);
-        }
-
-        if (req.body.voteStart2 && req.body.voteEnd2) {
-            let votingRound = new VotingRound();
-            votingRound.startDate = req.body.voteStart2;
-            votingRound.endDate = req.body.voteEnd2;
-            votingRounds.push(votingRound);
-        }
-
-        campaign.voting = votingRounds;
 
         campaign.save(function (err) {
             if (err) {
@@ -446,10 +424,6 @@ exports.new = function (req, res) {
  * @name PATCH_/api/voting/admin/:campaignID
  * @param req.params.campaignID is the campaign ID to be updated
  * @param req.body.campaignBannerFile is a file
- * @param req.body.voteStart1
- * @param req.body.voteEnd1
- * @param req.body.voteStart2
- * @param req.body.voteEnd2
  * @return res.body.id is the campaign id.
  */
 exports.update = function (req, res) {
@@ -478,40 +452,17 @@ exports.update = function (req, res) {
                     });
                 }
 
-                let votingRounds = campaign.voting;
-
-                if (req.body.voteStart1) {
-                    let votingRound = votingRounds[0];
-                    votingRound.startDate = req.body.voteStart1;
-                    votingRounds[0] = votingRound;
-                }
-                if (req.body.voteEnd1) {
-                    let votingRound = votingRounds[0];
-                    votingRound.endDate = req.body.voteEnd1;
-                    votingRounds[0] = votingRound;
-                }
-                if (req.body.voteStart2) {
-                    let votingRound =
-                        votingRounds.length > 1
-                            ? votingRounds[1]
-                            : new VotingRound();
-                    votingRound.startDate = req.body.voteStart2;
-                    votingRounds[1] = votingRound;
-                }
-                if (req.body.voteEnd2) {
-                    let votingRound =
-                        votingRounds.length > 1
-                            ? votingRounds[1]
-                            : new VotingRound();
-                    votingRound.startDate = req.body.voteEnd2;
-                    votingRounds[1] = votingRound;
-                }
-
-                // FIXME: validation needed?
+                const {
+                    // eslint-disable-next-line no-unused-vars
+                    voting: voting,
+                    // eslint-disable-next-line no-unused-vars
+                    candidatePool: candidatePool,
+                    ...updateBody
+                } = req.body;
 
                 VotingCampaign.findByIdAndUpdate(
                     req.params.campaignID,
-                    { ...req.body, ...{ voting: votingRounds } },
+                    updateBody,
                     { useFindAndModify: false, runValidators: true },
                     function (err, oldCampaign) {
                         if (err) {
@@ -587,6 +538,73 @@ exports.delete = function (req, res) {
                 message: 'Voting campaign is deleted.',
             });
         });
+    });
+};
+
+/**
+ * @name POST_/api/voting/admin/:campaignID/round
+ */
+exports.newRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        let newRound = new VotingRound({
+            ...req.body,
+            candidates: [],
+            votes: new Set(),
+        });
+        let newRoundID = campaign.voting.length;
+        campaign.voting.push(newRound);
+
+        campaign
+            .save()
+            .then(() => res.json({ data: newRoundID }))
+            .catch(() => res.sendStatus(500));
+    });
+};
+
+/**
+ * @name GET_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.viewRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        res.json({
+            data: { ...campaign.voting[req.params.roundID], votes: {} },
+        });
+    });
+};
+
+/**
+ * @name PATCH_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.updateRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        campaign.voting[req.params.roundID].startDate = req.body.startDate;
+        campaign.voting[req.params.roundID].endDate = req.body.endDate;
+
+        campaign
+            .save()
+            .then((newCampaign) => res.json({ data: newCampaign }))
+            .catch(() => res.sendStatus(500));
+    });
+};
+
+/**
+ * @name DELETE_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.deleteRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        campaign.voting[req.params.roundID].splice(req.params.roundID, 1);
+
+        campaign
+            .save()
+            .then((newCampaign) => res.json({ data: newCampaign }))
+            .catch(() => res.sendStatus(500));
     });
 };
 
@@ -1227,7 +1245,7 @@ exports.viewMotivationEssay = function (req, res) {
 
 /**
  * Select candidates to compete in the voting round.
- * @name POST_/api/voting/:campaignID/candidates/:round
+ * @name POST_/api/voting/:campaignID/round/:round/candidates
  * @param req.params.campaignID is the campaign ID
  * @param req.params.round is the voting round
  * @param req.body.candidates is the list of candidate IDs or candidate schema IDs (the latter is the one being saved)
