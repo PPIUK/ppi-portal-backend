@@ -326,19 +326,23 @@ exports.update = function (req, res) {
                 });
             }
             // FIXME: the two if statements below prohibit almost any update to be done really, only 'All' branch can update and it can only update profile in the same branch
-            if (profile.branch !== res.locals.oauth.token.user.branch) {
+            if (
+                profile.branch !== res.locals.oauth.token.user.branch &&
+                res.locals.oauth.token.user.branch !== 'All'
+            ) {
                 return res.status(403).json({
                     message:
-                        "You don't have enough privilege to do this action",
+                        "You don't have enough privilege to do this actionx",
                 });
             }
             if (
+                req.body.branch &&
                 req.body.branch !== profile.branch &&
                 res.locals.oauth.token.user.branch !== 'All'
             ) {
                 return res.status(403).json({
                     message:
-                        "You don't have enough privilege to do this action",
+                        "You don't have enough privilege to do this actiony",
                 });
             }
 
