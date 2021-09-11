@@ -210,19 +210,15 @@ exports.votersStatistics = async function (req, res) {
             for (let round of campaign.voting) {
                 let roundStatistics = {};
                 let aggregationPipeline = getEligibleListPipeline(campaign);
-                aggregationPipeline.push({
-                    $count: 'eligibleVotersCount',
-                });
-                const aggregateResult = await Profile.aggregate(
+
+                const eligibleVoters = await Profile.aggregate(
                     aggregationPipeline
                 );
                 roundStatistics.votersCount = [
                     { name: 'has voted', value: round.votes.size },
                     {
                         name: 'has not voted',
-                        value:
-                            aggregateResult[0].eligibleVotersCount -
-                            round.votes.size,
+                        value: eligibleVoters.length - round.votes.size,
                     },
                 ];
 
@@ -233,25 +229,47 @@ exports.votersStatistics = async function (req, res) {
                     {
                         _id: { $in: voterIds },
                     },
-                    { _id: 1, branch: 1 }
+                    { _id: 1, branch: 1, degreeLevel: 1 }
                 );
-                const branches = profiles.map((profile) => {
+
+                roundStatistics.branchesCount = getVoterPropertyStatisticsArray(
+                    profiles,
+                    'branch'
+                );
+
+                roundStatistics.degreeLevelCount = getVoterPropertyStatisticsArray(
+                    profiles,
+                    'degreeLevel'
+                );
+
+                const eligibleVotersBranch = eligibleVoters.map((profile) => {
                     return profile.branch;
                 });
 
-                const branchesCount = branches.reduce((total, value) => {
-                    total[value] = (total[value] || 0) + 1;
-                    return total;
-                }, {});
+                const eligibleVotersBranchCount = eligibleVotersBranch.reduce(
+                    (total, value) => {
+                        total[value] = (total[value] || 0) + 1;
+                        return total;
+                    },
+                    {}
+                );
 
-                let branchesCountArray = [];
-                for (let branch in branchesCount) {
-                    branchesCountArray.push({
+                let votersBranchCountArray = [];
+                for (let branch in eligibleVotersBranchCount) {
+                    let hasVoted = roundStatistics.branchesCount.find((b) => {
+                        return b.name === branch;
+                    });
+                    hasVoted = hasVoted ? hasVoted.voters : 0;
+
+                    votersBranchCountArray.push({
                         name: branch,
-                        voters: branchesCount[branch],
+                        hasVoted: hasVoted,
+                        hasNotVoted:
+                            eligibleVotersBranchCount[branch] - hasVoted,
                     });
                 }
-                roundStatistics.branchesCount = branchesCountArray;
+                roundStatistics.votersBranchCount = votersBranchCountArray;
+
                 statistics.push(roundStatistics);
             }
 
@@ -262,6 +280,26 @@ exports.votersStatistics = async function (req, res) {
         }
     );
 };
+
+function getVoterPropertyStatisticsArray(profiles, property) {
+    const propertyValues = profiles.map((profile) => {
+        return profile[property];
+    });
+
+    const valuesCount = propertyValues.reduce((total, value) => {
+        total[value] = (total[value] || 0) + 1;
+        return total;
+    }, {});
+
+    let valuesCountArray = [];
+    for (let value in valuesCount) {
+        valuesCountArray.push({
+            name: value,
+            voters: valuesCount[value],
+        });
+    }
+    return valuesCountArray;
+}
 
 exports.statistics = async function (req, res) {
     VotingCampaign.findById(req.params.campaignID, { voting: 1 }).exec(
@@ -293,6 +331,15 @@ exports.statistics = async function (req, res) {
                         votes: overallCount[cand],
                     };
                 }
+                for (let i = 0; i < overallCountArray.length; i++) {
+                    if (!overallCountArray[i]) {
+                        overallCountArray[i] = {
+                            candidateID: candidates[i],
+                            votes: 0,
+                        };
+                    }
+                }
+
                 if (overallCountArray.length > 0) {
                     roundStatistics.overall = overallCountArray;
                 }
@@ -377,6 +424,14 @@ function reshapeStatistics(data, outerKey, childrenKey, candidates) {
                 ...{ [outerKey]: single },
                 ...statsObj[single],
             });
+        }
+    }
+
+    for (let i = 0; i < statsArray.length; i++) {
+        if (!statsArray[i]) {
+            statsArray[i] = {
+                [outerKey]: candidates[i],
+            };
         }
     }
     return statsArray;
@@ -1450,6 +1505,16 @@ function getEligibleListPipeline(campaign) {
             },
         });
     }
+    aggregationPipeline.push({
+        $project: {
+            _id: 1,
+            fullName: 1,
+            degreeLevel: 1,
+            branch: 1,
+            startDate: 1,
+            endDate: 1,
+        },
+    });
     return aggregationPipeline;
 }
 
