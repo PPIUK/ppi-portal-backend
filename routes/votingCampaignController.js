@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
 const dfd = require('danfojs-node');
+var crypto = require('crypto');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
 const VotingRound = mongoose.model('VotingRound');
@@ -1637,9 +1638,7 @@ exports.vote = async function (req, res) {
         campaign.voting[round].votes.set(voterId, req.params.candidateID);
         let savedCampaign = await campaign.save();
         if (savedCampaign) {
-            return res.status(200).json({
-                message: 'Voting successful.',
-            });
+            sendVotingSuccessEmail(voterId, req.params.candidateID, req, res);
         }
     } catch (err) {
         return res.status(500).json({
@@ -1647,6 +1646,60 @@ exports.vote = async function (req, res) {
         });
     }
 };
+
+async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
+    const hashValue = crypto
+        .createHash('md5')
+        .update(voterId + candidateId)
+        .digest('hex');
+
+    Profile.findById(
+        voterId,
+        { email: 1, emailPersonal: 1 },
+        function (err, profile) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!profile) {
+                return res.status(404).json({
+                    message: 'Invalid profile ID.',
+                });
+            }
+
+            let emails = [];
+            if (profile.email) {
+                emails.push(profile.email);
+            }
+            if (profile.emailPersonal) {
+                emails.push(profile.emailPersonal);
+            }
+            let message = {
+                from: 'KPU PPI UK - No Reply <kpuppiuk@gmail.com>', // sender address
+                replyTo: 'no-reply@example.com',
+                to: emails, // list of receivers
+                subject: 'Thank you for your vote', // Subject line
+                html: `<p>Thank you for your vote in this election. Please keep this email and this code: ${hashValue} 
+                as your receipt. 
+                Follow our Instagram account @kpuppi_unitedkingdom or explore the hashtag #PPIUKMemilih 
+                for any update about PPI UK General Election 2021.
+                Send us your enquiries to kpuppiuk@gmail.com </p>`, // html body
+            };
+
+            mailTransporter.sendMail(message, (err) => {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(201).json({
+                    message: 'Voting successful and email sent',
+                });
+            });
+        }
+    );
+}
 
 /**
  * Find permission for the requested action and role
