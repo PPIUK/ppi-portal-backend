@@ -331,7 +331,7 @@ exports.statistics = async function (req, res) {
                         votes: overallCount[cand],
                     };
                 }
-                for (let i = 0; i < overallCountArray.length; i++) {
+                for (let i = 0; i < candidates.length; i++) {
                     if (!overallCountArray[i]) {
                         overallCountArray[i] = {
                             candidateID: candidates[i],
@@ -426,12 +426,13 @@ function reshapeStatistics(data, outerKey, childrenKey, candidates) {
             });
         }
     }
-
-    for (let i = 0; i < statsArray.length; i++) {
-        if (!statsArray[i]) {
-            statsArray[i] = {
-                [outerKey]: candidates[i],
-            };
+    if (outerKey === 'candidateID') {
+        for (let i = 0; i < candidates.length; i++) {
+            if (!statsArray[i]) {
+                statsArray[i] = {
+                    [outerKey]: candidates[i],
+                };
+            }
         }
     }
     return statsArray;
@@ -1742,16 +1743,22 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
             if (profile.emailPersonal) {
                 emails.push(profile.emailPersonal);
             }
+            // FIXME: message should be dynamic
             let message = {
                 from: 'KPU PPI UK - No Reply <kpuppiuk@gmail.com>', // sender address
                 replyTo: 'no-reply@example.com',
                 to: emails, // list of receivers
                 subject: 'Thank you for your vote', // Subject line
-                html: `<p>Thank you for your vote in this election. Please keep this email and this code: ${hashValue} 
-                as your receipt. 
-                Follow our Instagram account @kpuppi_unitedkingdom or explore the hashtag #PPIUKMemilih 
-                for any update about PPI UK General Election 2021.
-                Send us your enquiries to kpuppiuk@gmail.com </p>`, // html body
+                html: `<p>Thank you for taking your crucial role in shaping the PPI UK 2021/2022 through your vote in 
+                the first round of election. Please keep this email and this code: ${hashValue} as your receipt. </p>
+                <p><b>Inform your colleagues who are eligible as voters to vote in this round!
+                The vote portal will be available from 13 September 2021 at 00.00 BST to 14 September 2021 at 12.00 BST.</b></p>
+                <p>Updates about PPI UK General Election 2021:<br/>
+                Website <a href="https://ppiuk.org/pemilu">https://ppiuk.org/pemilu</a><br>
+                YouTube <a href="https://link.ppiuk.org/YoutubePemilu ">https://link.ppiuk.org/YoutubePemilu</a><br>
+                Instagram <a href="https://www.instagram.com/kpuppi_unitedkingdom/">@kpuppi_unitedkingdom</a>
+                </p>
+                <p>Send your enquiries to <a href="mailto:kpuppiuk@gmail.com">kpuppiuk@gmail.com</a></p>`, // html body
             };
 
             mailTransporter.sendMail(message, (err) => {
