@@ -387,6 +387,9 @@ module.exports = (app) => {
         .route('/voting/:campaignID/vote/:round/:candidateID')
         .post(app.oauth.authenticate(), votingCampaignController.vote);
     router
+        .route('/voting/:campaignID/round/:roundID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewRound);
+    router
         .route('/voting/:campaignID/eligibility')
         .get(app.oauth.authenticate(), votingCampaignController.eligibility);
     router

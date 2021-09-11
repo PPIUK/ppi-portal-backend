@@ -570,7 +570,10 @@ exports.viewRound = function (req, res) {
         if (err) res.sendStatus(500);
         if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
         res.json({
-            data: { ...campaign.voting[req.params.roundID], votes: {} },
+            data: {
+                ...campaign.voting[req.params.roundID].toObject(),
+                votes: {},
+            },
         });
     });
 };
@@ -1287,11 +1290,13 @@ exports.selectCandidates = function (req, res) {
 
             if (campaign.voting.length <= req.params.round) {
                 return res.status(400).json({
-                    message: `There is no voting round ${req.params.round} in this campaign`,
+                    message: `There is no voting round ${
+                        req.params.round + 1
+                    } in this campaign`,
                 });
             }
 
-            campaign.voting[req.params.round - 1].candidates = candidates;
+            campaign.voting[req.params.round].candidates = candidates;
             campaign.save().then(() => {
                 return res.status(200).json({
                     message: 'Candidates selected',
@@ -1513,10 +1518,12 @@ exports.hasVoted = function (req, res) {
             }
             if (campaign.voting.length <= req.params.round) {
                 return res.status(400).json({
-                    message: `There is no voting round ${req.params.round} in this campaign`,
+                    message: `There is no voting round ${
+                        req.params.round + 1
+                    } in this campaign`,
                 });
             }
-            const hasVoted = campaign.voting[req.params.round - 1].votes.has(
+            const hasVoted = campaign.voting[req.params.round].votes.has(
                 voterId
             );
 
@@ -1565,16 +1572,18 @@ exports.vote = async function (req, res) {
         const round = req.params.round;
         if (campaign.voting.length <= round) {
             return res.status(400).json({
-                message: `There is no voting round ${round} in this campaign`,
+                message: `There is no voting round ${
+                    round + 1
+                } in this campaign`,
             });
         }
         let current = new Date();
-        if (current < new Date(campaign.voting[round - 1].startDate)) {
+        if (current < new Date(campaign.voting[round].startDate)) {
             return res.status(403).json({
                 message: 'The voting phase has not started.',
             });
         }
-        if (current > new Date(campaign.voting[round - 1].endDate)) {
+        if (current > new Date(campaign.voting[round].endDate)) {
             return res.status(403).json({
                 message: 'The voting phase has ended.',
             });
@@ -1611,23 +1620,21 @@ exports.vote = async function (req, res) {
                     'You are not eligible to vote due to your course start date.',
             });
         }
-        if (campaign.voting[round - 1].votes.has(voterId)) {
+        if (campaign.voting[round].votes.has(voterId)) {
             return res.status(400).json({
                 message: 'You have already voted in this campaign',
             });
         }
 
         if (
-            !campaign.voting[round - 1].candidates.includes(
-                req.params.candidateID
-            )
+            !campaign.voting[round].candidates.includes(req.params.candidateID)
         ) {
             return res.status(404).json({
                 message: 'Candidate ID not found in this campaign.',
             });
         }
 
-        campaign.voting[round - 1].votes.set(voterId, req.params.candidateID);
+        campaign.voting[round].votes.set(voterId, req.params.candidateID);
         let savedCampaign = await campaign.save();
         if (savedCampaign) {
             return res.status(200).json({
