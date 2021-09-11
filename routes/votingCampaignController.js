@@ -1325,25 +1325,6 @@ exports.selectCandidates = function (req, res) {
                 });
             }
 
-            let candidates = new Set();
-            for (let id of req.body.candidates) {
-                let candidate = campaign.candidatePool.find(
-                    ({ candidateID }) => String(candidateID) === id
-                );
-                if (!candidate) {
-                    candidate = campaign.candidatePool.find(
-                        ({ _id }) => String(_id) === id
-                    );
-                }
-                if (!candidate) {
-                    return res.status(404).json({
-                        message: `Candidate ID ${id} not found in this campaign.`,
-                    });
-                }
-                candidates.add(candidate._id);
-            }
-            candidates = Array.from(candidates);
-
             if (campaign.voting.length <= req.params.round) {
                 return res.status(400).json({
                     message: `There is no voting round ${
@@ -1352,7 +1333,28 @@ exports.selectCandidates = function (req, res) {
                 });
             }
 
-            campaign.voting[req.params.round].candidates = candidates;
+            if (req.body.candidates) {
+                let candidates = new Set();
+                for (let id of req.body.candidates) {
+                    let candidate = campaign.candidatePool.find(
+                        ({ candidateID }) => String(candidateID) === id
+                    );
+                    if (!candidate) {
+                        candidate = campaign.candidatePool.find(
+                            ({ _id }) => String(_id) === id
+                        );
+                    }
+                    if (!candidate) {
+                        return res.status(404).json({
+                            message: `Candidate ID ${id} not found in this campaign.`,
+                        });
+                    }
+                    candidates.add(candidate._id);
+                }
+                candidates = Array.from(candidates);
+                campaign.voting[req.params.round].candidates = candidates;
+            }
+
             campaign.save().then(() => {
                 return res.status(200).json({
                     message: 'Candidates selected',
