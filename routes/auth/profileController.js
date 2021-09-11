@@ -332,7 +332,7 @@ exports.update = function (req, res) {
             ) {
                 return res.status(403).json({
                     message:
-                        "You don't have enough privilege to do this actionx",
+                        "You don't have enough privilege to do this action",
                 });
             }
             if (
@@ -342,7 +342,7 @@ exports.update = function (req, res) {
             ) {
                 return res.status(403).json({
                     message:
-                        "You don't have enough privilege to do this actiony",
+                        "You don't have enough privilege to do this action",
                 });
             }
 
