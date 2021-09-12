@@ -42,6 +42,7 @@ const grants = {
         },
     },
     flagged: {},
+    blocked: {},
 
     // grants for specific forms
     mvpAwardsAccess: {

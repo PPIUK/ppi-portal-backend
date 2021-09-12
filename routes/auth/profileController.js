@@ -6,6 +6,7 @@ const Profile = mongoose.model('Profile');
 const AccessControl = require('accesscontrol');
 const ac = require(global.appRoot + '/config/roles');
 const utils = require('../utils');
+const allowedDomains = require('../../data/uniemails.json');
 
 const publicInfo = [
     '_id',
@@ -491,44 +492,6 @@ exports.viewSelf = function (req, res) {
  * @return res.body.data the newly updated profile
  */
 exports.updateSelf = function (req, res) {
-    if (req.body.password) {
-        return res.status(400).json({
-            message: 'Password should not be updated using this method',
-        });
-    }
-
-    // cannot update own roles, wouldn't happen unless someone
-    // crafted their own request hence the cheeky response
-    if (req.body.roles) {
-        return res.status(400).json({
-            message: 'Nice try :)',
-        });
-    }
-
-    // cannot set own branch to 'All'
-    if (
-        req.body.branch === 'All' &&
-        res.locals.oauth.token.user.branch !== 'All'
-    )
-        return res.status(400).json({
-            message: 'Cannot set own branch to All',
-        });
-
-    // check for priviliged roles, these are untransferrable
-    const disallowedRoles = ['dataAccess', 'verifier'];
-    if (
-        req.body.branch &&
-        req.body.branch !== res.locals.oauth.token.user.branch
-    ) {
-        for (let role of res.locals.oauth.token.user.roles) {
-            if (disallowedRoles.includes(role))
-                return res.status(400).json({
-                    message:
-                        'Cannot transfer branches with privileged roles. Please have them removed first.',
-                });
-        }
-    }
-
     profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
@@ -537,6 +500,49 @@ exports.updateSelf = function (req, res) {
         }
 
         req.body = saveFileId(req, req.body);
+
+        if (req.body.password) {
+            return res.status(400).json({
+                message: 'Password should not be updated using this method',
+            });
+        }
+
+        if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+            return res.status(400).json({
+                message: 'Email is not allowed',
+            });
+
+        // cannot update own roles, wouldn't happen unless someone
+        // crafted their own request hence the cheeky response
+        if (req.body.roles) {
+            return res.status(400).json({
+                message: 'Nice try :)',
+            });
+        }
+
+        // cannot set own branch to 'All'
+        if (
+            req.body.branch === 'All' &&
+            res.locals.oauth.token.user.branch !== 'All'
+        )
+            return res.status(400).json({
+                message: 'Cannot set own branch to All',
+            });
+
+        // check for priviliged roles, these are untransferrable
+        const disallowedRoles = ['dataAccess', 'verifier'];
+        if (
+            req.body.branch &&
+            req.body.branch !== res.locals.oauth.token.user.branch
+        ) {
+            for (let role of res.locals.oauth.token.user.roles) {
+                if (disallowedRoles.includes(role))
+                    return res.status(400).json({
+                        message:
+                            'Cannot transfer branches with privileged roles. Please have them removed first.',
+                    });
+            }
+        }
 
         Profile.findByIdAndUpdate(
             res.locals.oauth.token.user,

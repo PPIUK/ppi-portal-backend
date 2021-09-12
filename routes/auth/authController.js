@@ -74,6 +74,13 @@ exports.login = function (req, res, cbFunc) {
                 message: 'Email for this account is not verified yet.',
             });
         }
+
+        if (profile.roles.includes('blocked')) {
+            return res.status(403).json({
+                message:
+                    'Your account has been blocked. Please contact us for more detail.',
+            });
+        }
         cbFunc();
     });
 };
@@ -208,7 +215,7 @@ exports.registerNew = function (req, res) {
     Verification email is sent afterwards.
  */
 exports.setPassword = function (req, res) {
-    if (!req.body.email.endsWith('ac.uk')  || !req.body.email.endsWith('.edu')) {
+    if (!req.body.email.endsWith('ac.uk') || !req.body.email.endsWith('.edu')) {
         return res.status(400).json({
             message: 'Email is not a valid UK university email address.',
         });
