@@ -533,3 +533,5 @@ async function sendVerificationEmail(profile, req, res) {
         });
     });
 }
+
+module.exports.sendVerificationEmail = sendVerificationEmail;

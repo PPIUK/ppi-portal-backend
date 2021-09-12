@@ -9,10 +9,6 @@ const votingCandidateSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         required: false,
     },
-    // studentProof: {
-    //     type: mongoose.Schema.ObjectId,
-    //     required: false,
-    // },
     organisationExp: {
         type: mongoose.Schema.ObjectId,
         required: false,
@@ -29,12 +25,45 @@ const votingCandidateSchema = new mongoose.Schema({
         type: mongoose.Schema.ObjectId,
         required: false,
     },
-    votes: {
+    // votes: {
+    //     type: [mongoose.Schema.ObjectId],
+    //     required: true,
+    //     default: [],
+    //     ref: 'Profile',
+    // },
+});
+
+const votingRoundSchema = new mongoose.Schema({
+    startDate: {
+        type: Date,
+        required: true,
+    },
+    endDate: {
+        type: Date,
+        required: true,
+    },
+    candidates: {
         type: [mongoose.Schema.ObjectId],
         required: true,
         default: [],
-        ref: 'Profile',
+        ref: 'VotingCandidate',
     },
+    votes: {
+        type: Map,
+        of: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'VotingCandidate',
+        },
+        // of: String,
+        default: {},
+    },
+});
+
+votingRoundSchema.pre('validate', function (next) {
+    if (this.startDate >= this.endDate) {
+        this.invalidate('endDate', 'endDate must be after startDate');
+    }
+    next();
 });
 
 const votingCampaignSchema = new mongoose.Schema({
@@ -71,16 +100,12 @@ const votingCampaignSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
-    voteStart: {
-        type: Date,
-        required: true,
-    },
-    voteEnd: {
-        type: Date,
-        required: true,
-    },
-    candidates: {
+    candidatePool: {
         type: [votingCandidateSchema],
+        default: [],
+    },
+    voting: {
+        type: [votingRoundSchema],
         default: [],
     },
     public: {
@@ -97,20 +122,32 @@ votingCampaignSchema.pre('validate', function (next) {
         );
     }
 
-    let gracePeriod = new Date(this.voteStart);
-    gracePeriod.setHours(gracePeriod.getHours() - 1);
-    if (this.nominateEnd >= gracePeriod) {
-        this.invalidate(
-            'voteStart',
-            'voteStart should be more than 1 hour after nominateEnd'
-        );
+    if (this.voting.length === 0) {
+        this.invalidate('voting', 'At least 1 voting round should be created!');
+    } else {
+        let gracePeriod = new Date(this.voting[0].startDate);
+        gracePeriod.setHours(gracePeriod.getHours() - 1);
+        if (this.nominateEnd >= gracePeriod) {
+            this.invalidate(
+                'voting',
+                'voting.startDate should be more than 1 hour after nominateEnd'
+            );
+        }
+        let endDate = this.voting[0].endDate;
+        for (let round of this.voting.slice(1, this.voting.length)) {
+            if (round.startDate <= endDate) {
+                this.invalidate(
+                    'voting',
+                    'voting.startDate of next round should be after the endDate of previous round'
+                );
+                endDate = round.endDate;
+            }
+        }
     }
 
-    if (this.voteStart >= this.voteEnd) {
-        this.invalidate('voteEnd', 'voteEnd must be after voteStart');
-    }
     next();
 });
 
+mongoose.model('VotingRound', votingRoundSchema, 'votingrounds');
 mongoose.model('VotingCandidate', votingCandidateSchema, 'votingcandidates');
 mongoose.model('VotingCampaign', votingCampaignSchema, 'votingcampaigns');

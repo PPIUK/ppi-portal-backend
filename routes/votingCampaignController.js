@@ -1,8 +1,13 @@
 const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
+const dfd = require('danfojs-node');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
+const VotingRound = mongoose.model('VotingRound');
 const VotingCampaign = mongoose.model('VotingCampaign');
 const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
@@ -79,9 +84,9 @@ exports.archived = function (req, res) {
     let now = new Date();
     VotingCampaign.find(
         {
-            voteEnd: { $lte: now },
+            $expr: { $lte: [{ $arrayElemAt: ['$voting.endDate', -1] }, now] },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -107,9 +112,9 @@ exports.active = function (req, res) {
     VotingCampaign.find(
         {
             nominateStart: { $lte: now },
-            voteEnd: { $gt: now },
+            $expr: { $gt: [{ $arrayElemAt: ['$voting.endDate', -1] }, now] },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -137,7 +142,7 @@ exports.activeNominate = function (req, res) {
             nominateStart: { $lte: now },
             nominateEnd: { $gt: now },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -163,8 +168,13 @@ exports.activeVote = function (req, res) {
     let now = new Date();
     VotingCampaign.find(
         {
-            voteStart: { $lte: now },
-            voteEnd: { $gt: now },
+            $expr: {
+                $gt: [{ $arrayElemAt: ['$voting.endDate', -1] }, now],
+            },
+            // eslint-disable-next-line no-dupe-keys
+            $expr: {
+                $lte: [{ $arrayElemAt: ['$voting.startDate', -1] }, now],
+            },
         },
         { 'candidates.votes': 0 }
     )
@@ -182,10 +192,11 @@ exports.activeVote = function (req, res) {
         });
 };
 
-exports.statistics = async function (req, res) {
-    VotingCampaign.findById(req.params.id, { candidates: 1 })
-        .populate('candidates.votes', 'branch')
-        .exec(function (err, campaign) {
+exports.votersStatistics = async function (req, res) {
+    VotingCampaign.findById(
+        req.params.id,
+        { voting: 1, voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
+        async function (err, campaign) {
             if (err) {
                 return res.status(500).json({
                     message: err.message,
@@ -196,36 +207,238 @@ exports.statistics = async function (req, res) {
                     message: 'Campaign not found',
                 });
             }
-            let candidates = campaign.candidates;
-            let votes = candidates.map((cand) => {
-                let branchDistribution = cand.votes.reduce((total, value) => {
-                    total[value.branch] = (total[value.branch] || 0) + 1;
+
+            let statistics = [];
+            for (let round of campaign.voting) {
+                let roundStatistics = {};
+                let aggregationPipeline = getEligibleListPipeline(campaign);
+
+                const eligibleVoters = await Profile.aggregate(
+                    aggregationPipeline
+                );
+                roundStatistics.votersCount = [
+                    { name: 'has voted', value: round.votes.size },
+                    {
+                        name: 'has not voted',
+                        value: eligibleVoters.length - round.votes.size,
+                    },
+                ];
+
+                const voterIds = Array.from(round.votes.keys()).map((id) =>
+                    mongoose.Types.ObjectId(id)
+                );
+                let profiles = await Profile.find(
+                    {
+                        _id: { $in: voterIds },
+                    },
+                    { _id: 1, branch: 1, degreeLevel: 1 }
+                );
+
+                roundStatistics.branchesCount = getVoterPropertyStatisticsArray(
+                    profiles,
+                    'branch'
+                );
+
+                roundStatistics.degreeLevelCount = getVoterPropertyStatisticsArray(
+                    profiles,
+                    'degreeLevel'
+                );
+
+                const eligibleVotersBranch = eligibleVoters.map((profile) => {
+                    return profile.branch;
+                });
+
+                const eligibleVotersBranchCount = eligibleVotersBranch.reduce(
+                    (total, value) => {
+                        total[value] = (total[value] || 0) + 1;
+                        return total;
+                    },
+                    {}
+                );
+
+                let votersBranchCountArray = [];
+                for (let branch in eligibleVotersBranchCount) {
+                    let hasVoted = roundStatistics.branchesCount.find((b) => {
+                        return b.name === branch;
+                    });
+                    hasVoted = hasVoted ? hasVoted.voters : 0;
+
+                    votersBranchCountArray.push({
+                        name: branch,
+                        hasVoted: hasVoted,
+                        hasNotVoted:
+                            eligibleVotersBranchCount[branch] - hasVoted,
+                    });
+                }
+                roundStatistics.votersBranchCount = votersBranchCountArray;
+
+                statistics.push(roundStatistics);
+            }
+
+            return res.status(200).json({
+                message: 'Campaign voters statistics returned.',
+                data: statistics,
+            });
+        }
+    );
+};
+
+function getVoterPropertyStatisticsArray(profiles, property) {
+    const propertyValues = profiles.map((profile) => {
+        return profile[property];
+    });
+
+    const valuesCount = propertyValues.reduce((total, value) => {
+        total[value] = (total[value] || 0) + 1;
+        return total;
+    }, {});
+
+    let valuesCountArray = [];
+    for (let value in valuesCount) {
+        valuesCountArray.push({
+            name: value,
+            voters: valuesCount[value],
+        });
+    }
+    return valuesCountArray;
+}
+
+exports.statistics = async function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, { voting: 1 }).exec(
+        async function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
+            }
+            let statistics = [];
+            for (let round of campaign.voting) {
+                let roundStatistics = {};
+                const candidates = round.candidates;
+                const votes = Array.from(round.votes.values());
+                const overallCount = votes.reduce((total, value) => {
+                    total[value] = (total[value] || 0) + 1;
                     return total;
                 }, {});
-                return {
-                    candidateID: cand.candidateID,
-                    totalVotes: cand.votes.length,
-                    branchDistribution: branchDistribution,
-                };
-            });
 
-            let all_votes = [].concat.apply(
-                [],
-                candidates.map((cand) => cand.votes)
-            );
-            let branchDistribution = all_votes.reduce((total, value) => {
-                total[value.branch] = (total[value.branch] || 0) + 1;
-                return total;
-            }, {});
+                let overallCountArray = [];
+                for (let cand in overallCount) {
+                    overallCountArray[candidates.indexOf(cand)] = {
+                        candidateID: cand,
+                        votes: overallCount[cand],
+                    };
+                }
+                for (let i = 0; i < candidates.length; i++) {
+                    if (!overallCountArray[i]) {
+                        overallCountArray[i] = {
+                            candidateID: candidates[i],
+                            votes: 0,
+                        };
+                    }
+                }
+
+                if (overallCountArray.length > 0) {
+                    roundStatistics.overall = overallCountArray;
+                }
+
+                const voterIds = Array.from(round.votes.keys()).map((id) =>
+                    mongoose.Types.ObjectId(id)
+                );
+                let profiles = await Profile.find(
+                    {
+                        _id: { $in: voterIds },
+                    },
+                    { _id: 1, branch: 1 }
+                );
+                profiles = profiles.map((profile, i) => {
+                    return {
+                        id: String(profile._id),
+                        branch: profile.branch,
+                        candidateID: String(votes[i]),
+                    };
+                });
+
+                if (profiles.length > 0) {
+                    const df = new dfd.DataFrame(profiles);
+
+                    let grp = df.groupby(['candidateID', 'branch']);
+                    grp.agg({ id: 'count' })
+                        .rename({ mapper: { id_count: 'votes' } })
+                        .to_json()
+                        .then((json) => {
+                            const data = JSON.parse(json);
+
+                            roundStatistics.candidateToBranch = reshapeStatistics(
+                                data,
+                                'candidateID',
+                                'branch',
+                                candidates
+                            );
+                            roundStatistics.branchToCandidate = reshapeStatistics(
+                                data,
+                                'branch',
+                                'candidateID',
+                                candidates
+                            );
+                        })
+                        .catch((err) => {
+                            return res.status(500).json({
+                                message: err,
+                            });
+                        });
+                }
+
+                statistics.push(roundStatistics);
+            }
             return res.status(200).json({
                 message: 'Campaign statistics returned.',
-                data: {
-                    candidates: votes,
-                    branchDistribution: branchDistribution,
-                },
+                data: statistics,
             });
-        });
+        }
+    );
 };
+
+function reshapeStatistics(data, outerKey, childrenKey, candidates) {
+    const statsObj = {};
+    data.forEach((datum) => {
+        let single = {};
+        if (datum[outerKey] in statsObj) {
+            single = statsObj[datum[outerKey]];
+        }
+        single[datum[childrenKey]] = datum.votes;
+        statsObj[datum[outerKey]] = single;
+    });
+
+    let statsArray = [];
+    for (let single in statsObj) {
+        if (outerKey === 'candidateID') {
+            statsArray[candidates.indexOf(single)] = {
+                ...{ [outerKey]: single },
+                ...statsObj[single],
+            };
+        } else {
+            statsArray.push({
+                ...{ [outerKey]: single },
+                ...statsObj[single],
+            });
+        }
+    }
+    if (outerKey === 'candidateID') {
+        for (let i = 0; i < candidates.length; i++) {
+            if (!statsArray[i]) {
+                statsArray[i] = {
+                    [outerKey]: candidates[i],
+                };
+            }
+        }
+    }
+    return statsArray;
+}
 
 /**
  * Creates a new voting campaign.
@@ -283,25 +496,50 @@ exports.update = function (req, res) {
         if (req.file) {
             req.body.banner = mongoose.Types.ObjectId(req.file.id);
         }
-        VotingCampaign.findByIdAndUpdate(
+
+        VotingCampaign.findById(
             req.params.campaignID,
-            req.body,
-            { useFindAndModify: false },
-            function (err, oldCampaign) {
+            { voting: 1 },
+            function (err, campaign) {
                 if (err) {
                     return res.status(400).json({
                         message: err.message,
                     });
-                } else if (oldCampaign === null) {
+                } else if (campaign === null) {
                     return res.status(404).json({
                         message: 'Campaign with that ID is not found',
                     });
-                } else {
-                    return res.status(200).json({
-                        message: 'Voting campaign updated!',
-                        id: req.params.campaignID,
-                    });
                 }
+
+                const {
+                    // eslint-disable-next-line no-unused-vars
+                    voting: voting,
+                    // eslint-disable-next-line no-unused-vars
+                    candidatePool: candidatePool,
+                    ...updateBody
+                } = req.body;
+
+                VotingCampaign.findByIdAndUpdate(
+                    req.params.campaignID,
+                    updateBody,
+                    { useFindAndModify: false, runValidators: true },
+                    function (err, oldCampaign) {
+                        if (err) {
+                            return res.status(400).json({
+                                message: err.message,
+                            });
+                        } else if (oldCampaign === null) {
+                            return res.status(404).json({
+                                message: 'Campaign with that ID is not found',
+                            });
+                        } else {
+                            return res.status(200).json({
+                                message: 'Voting campaign updated!',
+                                id: req.params.campaignID,
+                            });
+                        }
+                    }
+                );
             }
         );
     });
@@ -363,6 +601,76 @@ exports.delete = function (req, res) {
 };
 
 /**
+ * @name POST_/api/voting/admin/:campaignID/round
+ */
+exports.newRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        let newRound = new VotingRound({
+            ...req.body,
+            candidates: [],
+            votes: new Set(),
+        });
+        let newRoundID = campaign.voting.length;
+        campaign.voting.push(newRound);
+
+        campaign
+            .save()
+            .then(() => res.json({ data: newRoundID }))
+            .catch((err) => res.status(500).json({ data: err }));
+    });
+};
+
+/**
+ * @name GET_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.viewRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        res.json({
+            data: {
+                ...campaign.voting[req.params.roundID].toObject(),
+                votes: {},
+            },
+        });
+    });
+};
+
+/**
+ * @name PATCH_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.updateRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        campaign.voting[req.params.roundID].startDate = req.body.startDate;
+        campaign.voting[req.params.roundID].endDate = req.body.endDate;
+
+        campaign
+            .save()
+            .then((newCampaign) => res.json({ data: newCampaign }))
+            .catch((err) => res.status(500).json({ data: err }));
+    });
+};
+
+/**
+ * @name DELETE_/api/voting/admin/:campaignID/round/:roundID
+ */
+exports.deleteRound = function (req, res) {
+    VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
+        if (err) res.sendStatus(500);
+        if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
+        campaign.voting[req.params.roundID].splice(req.params.roundID, 1);
+
+        campaign
+            .save()
+            .then((newCampaign) => res.json({ data: newCampaign }))
+            .catch(() => res.sendStatus(500));
+    });
+};
+
+/**
  * View information about the specified voting campaign, including the list of candidates.
  * The list of voters for each candidate is not included, for now.  TODO: change this to return statistics instead
  * Fields that are supposed to be a file are returned as the ID of the file, where the file itself can be retrieved
@@ -374,7 +682,7 @@ exports.delete = function (req, res) {
 exports.view = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { 'voting.votes': 0 },
         function (err, campaign) {
             if (err) {
                 return res.status(500).json({
@@ -461,13 +769,19 @@ exports.newNomination = function (req, res) {
             {
                 _id: req.params.campaignID,
             },
+            {},
             function (err, campaign) {
                 if (err) {
                     return res.status(500).json({
                         message: err.message,
                     });
                 }
-                let candidateExists = campaign.candidates.find(
+                if (!campaign) {
+                    return res.status(404).json({
+                        message: 'Campaign ID does not exist',
+                    });
+                }
+                let candidateExists = campaign.candidatePool.find(
                     ({ candidateID }) =>
                         String(candidateID) === req.body.candidateID
                 );
@@ -491,7 +805,7 @@ exports.newNomination = function (req, res) {
                 VotingCampaign.findByIdAndUpdate(
                     req.params.campaignID,
                     {
-                        $push: { candidates: candidate },
+                        $push: { candidatePool: candidate },
                     },
                     { useFindAndModify: false },
                     function (err, campaign) {
@@ -565,20 +879,20 @@ exports.updateNomination = function (req, res) {
 
         if (req.files) {
             if ('cv' in req.files) {
-                updateQuery['candidates.$.cv'] = mongoose.Types.ObjectId(
+                updateQuery['candidatePool.$.cv'] = mongoose.Types.ObjectId(
                     req.files['cv'][0].id
                 );
                 toBeDeleted.push('cv');
             }
             if ('organisationExp' in req.files) {
                 updateQuery[
-                    'candidates.$.organisationExp'
+                    'candidatePool.$.organisationExp'
                 ] = mongoose.Types.ObjectId(req.files['organisationExp'][0].id);
                 toBeDeleted.push('organisationExp');
             }
             if ('notInOfficeStatement' in req.files) {
                 updateQuery[
-                    'candidates.$.notInOfficeStatement'
+                    'candidatePool.$.notInOfficeStatement'
                 ] = mongoose.Types.ObjectId(
                     req.files['notInOfficeStatement'][0].id
                 );
@@ -586,14 +900,14 @@ exports.updateNomination = function (req, res) {
             }
             if ('motivationEssay' in req.files) {
                 updateQuery[
-                    'candidates.$.motivationEssay'
+                    'candidatePool.$.motivationEssay'
                 ] = mongoose.Types.ObjectId(req.files['motivationEssay'][0].id);
                 toBeDeleted.push('motivationEssay');
             }
         }
 
         if (req.body.videoLink) {
-            updateQuery['candidates.$.videoLink'] = req.body.videoLink;
+            updateQuery['candidatePool.$.videoLink'] = req.body.videoLink;
         }
 
         VotingCampaign.findById(
@@ -625,7 +939,7 @@ exports.updateNomination = function (req, res) {
                 VotingCampaign.findOneAndUpdate(
                     {
                         _id: req.params.campaignID,
-                        'candidates.candidateID': String(
+                        'candidatePool.candidateID': String(
                             res.locals.oauth.token.user._id
                         ),
                     },
@@ -651,7 +965,7 @@ exports.updateNomination = function (req, res) {
                             }
                         );
 
-                        let candidate = campaign.candidates.find(
+                        let candidate = campaign.candidatePool.find(
                             ({ candidateID }) =>
                                 String(candidateID) ===
                                 String(res.locals.oauth.token.user._id)
@@ -677,9 +991,9 @@ exports.updateNomination = function (req, res) {
 
                         VotingCampaign.findById(
                             req.params.campaignID,
-                            { candidates: 1 },
+                            { candidatePool: 1 },
                             function (err, campaign) {
-                                let candidate = campaign.candidates.find(
+                                let candidate = campaign.candidatePool.find(
                                     ({ candidateID }) =>
                                         String(candidateID) ===
                                         String(res.locals.oauth.token.user._id)
@@ -775,7 +1089,7 @@ async function sendCompletedSubmissionEmail(candidateId, req, res) {
 exports.viewNomination = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { candidatePool: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(400).json({
@@ -787,14 +1101,19 @@ exports.viewNomination = function (req, res) {
                     message: 'Invalid campaign ID.',
                 });
             }
-            if (campaign.candidates.length === 0) {
+            if (campaign.candidatePool.length === 0) {
                 return res.status(404).json({
                     message: 'There is no candidate yet for this campaign ID.',
                 });
             }
-            let candidate = campaign.candidates.find(
+            let candidate = campaign.candidatePool.find(
                 ({ candidateID }) => String(candidateID) === req.params.userID
             );
+            if (!candidate) {
+                candidate = campaign.candidatePool.find(
+                    ({ _id }) => String(_id) === req.params.userID
+                );
+            }
             if (!candidate) {
                 return res.status(404).json({
                     message: 'Candidate ID not found in this campaign.',
@@ -820,7 +1139,7 @@ exports.viewNomination = function (req, res) {
 exports.viewSelfNomination = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { 'candidates.votes': 0 },
+        { candidatePool: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(400).json({
@@ -832,12 +1151,12 @@ exports.viewSelfNomination = function (req, res) {
                     message: 'Invalid campaign ID.',
                 });
             }
-            if (campaign.candidates.length === 0) {
+            if (campaign.candidatePool.length === 0) {
                 return res.status(404).json({
                     message: 'You have not nominated yourself in this campaign',
                 });
             }
-            let candidate = campaign.candidates.find(
+            let candidate = campaign.candidatePool.find(
                 ({ candidateID }) =>
                     String(candidateID) ===
                     String(res.locals.oauth.token.user._id)
@@ -864,7 +1183,7 @@ exports.viewSelfNomination = function (req, res) {
 exports.viewCV = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -896,14 +1215,19 @@ function findCandidateAndSendFile(
             message: 'Invalid campaign ID.',
         });
     }
-    if (campaign.candidates.length === 0) {
+    if (campaign.candidatePool.length === 0) {
         return res.status(404).json({
             message: 'There is no candidate yet for this campaign ID.',
         });
     }
-    let candidate = campaign.candidates.find(
+    let candidate = campaign.candidatePool.find(
         ({ candidateID }) => String(candidateID) === req.params.userID
     );
+    if (!candidate) {
+        candidate = campaign.candidatePool.find(
+            ({ _id }) => String(_id) === req.params.userID
+        );
+    }
     if (!candidate) {
         return res.status(404).json({
             message: 'Candidate ID not found in this campaign.',
@@ -921,7 +1245,7 @@ function findCandidateAndSendFile(
 exports.viewOrganisationExp = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -944,7 +1268,7 @@ exports.viewOrganisationExp = function (req, res) {
 exports.viewNotInOfficeStatement = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -967,7 +1291,7 @@ exports.viewNotInOfficeStatement = function (req, res) {
 exports.viewMotivationEssay = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { candidatePool: 1 },
         (err, campaign) => {
             findCandidateAndSendFile(
                 err,
@@ -977,6 +1301,68 @@ exports.viewMotivationEssay = function (req, res) {
                 'motivationEssay',
                 'campaigncandidatefiles'
             );
+        }
+    );
+};
+
+/**
+ * Select candidates to compete in the voting round.
+ * @name POST_/api/voting/:campaignID/round/:round/candidates
+ * @param req.params.campaignID is the campaign ID
+ * @param req.params.round is the voting round
+ * @param req.body.candidates is the list of candidate IDs or candidate schema IDs (the latter is the one being saved)
+ */
+exports.selectCandidates = function (req, res) {
+    VotingCampaign.findById(
+        req.params.campaignID,
+        { candidatePool: 1, voting: 1 },
+        function (err, campaign) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Invalid campaign ID',
+                });
+            }
+
+            if (campaign.voting.length <= req.params.round) {
+                return res.status(400).json({
+                    message: `There is no voting round ${
+                        req.params.round + 1
+                    } in this campaign`,
+                });
+            }
+
+            if (req.body.candidates) {
+                let candidates = new Set();
+                for (let id of req.body.candidates) {
+                    let candidate = campaign.candidatePool.find(
+                        ({ candidateID }) => String(candidateID) === id
+                    );
+                    if (!candidate) {
+                        candidate = campaign.candidatePool.find(
+                            ({ _id }) => String(_id) === id
+                        );
+                    }
+                    if (!candidate) {
+                        return res.status(404).json({
+                            message: `Candidate ID ${id} not found in this campaign.`,
+                        });
+                    }
+                    candidates.add(candidate._id);
+                }
+                candidates = Array.from(candidates);
+                campaign.voting[req.params.round].candidates = candidates;
+            }
+
+            campaign.save().then(() => {
+                return res.status(200).json({
+                    message: 'Candidates selected',
+                });
+            });
         }
     );
 };
@@ -1018,11 +1404,12 @@ exports.eligibility = async function (req, res) {
             data: false,
         });
     }
+
     if (
-        //TODO: how to decide if the Masters course is a 1 year course or not???
         profile.degreeLevel.includes('S2') &&
         !profile.degreeLevel.includes('S1') && //skipping integrated masters
         campaign.voterMastersCutOffStartDate &&
+        (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <= 365 && //TODO: how to decide if the Masters course is a 1 year course or not???
         profile.startDate < campaign.voterMastersCutOffStartDate
     ) {
         return res.status(200).json({
@@ -1034,6 +1421,107 @@ exports.eligibility = async function (req, res) {
         data: true,
     });
 };
+
+function getEligibleListPipeline(campaign) {
+    let aggregationPipeline = [
+        {
+            $match: {
+                roles: {
+                    $in: ['verified'],
+                },
+            },
+        },
+    ];
+    if (campaign.voterCutOffEndDate) {
+        aggregationPipeline.push({
+            $match: {
+                endDate: {
+                    $gt: new Date(campaign.voterCutOffEndDate),
+                },
+            },
+        });
+    }
+    if (campaign.voterMastersCutOffStartDate) {
+        aggregationPipeline.push({
+            $project: {
+                _id: 1,
+                fullName: 1,
+                degreeLevel: 1,
+                branch: 1,
+                startDate: 1,
+                endDate: 1,
+                courseLength: {
+                    $divide: [
+                        {
+                            $subtract: ['$endDate', '$startDate'],
+                        },
+                        1000 * 60 * 60 * 24,
+                    ],
+                },
+            },
+        });
+        aggregationPipeline.push({
+            $match: {
+                $or: [
+                    {
+                        degreeLevel: {
+                            // TODO: decide!
+                            // $in: [
+                            //     new RegExp('A-Level'),
+                            //     new RegExp('S1'),
+                            //     new RegExp('S3'),
+                            // ],
+                            $nin: [new RegExp('S2')],
+                        },
+                    },
+                    {
+                        $and: [
+                            {
+                                degreeLevel: new RegExp('S2'),
+                            },
+                            {
+                                $or: [
+                                    {
+                                        courseLength: {
+                                            $gt: 365,
+                                        },
+                                    },
+                                    {
+                                        $and: [
+                                            {
+                                                courseLength: {
+                                                    $lte: 365,
+                                                },
+                                            },
+                                            {
+                                                startDate: {
+                                                    $gte: new Date(
+                                                        campaign.voterMastersCutOffStartDate
+                                                    ),
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+        });
+    }
+    aggregationPipeline.push({
+        $project: {
+            _id: 1,
+            fullName: 1,
+            degreeLevel: 1,
+            branch: 1,
+            startDate: 1,
+            endDate: 1,
+        },
+    });
+    return aggregationPipeline;
+}
 
 exports.eligibleList = function (req, res) {
     VotingCampaign.findById(
@@ -1050,92 +1538,7 @@ exports.eligibleList = function (req, res) {
                     message: 'Campaign is not found',
                 });
             }
-
-            let aggregationPipeline = [
-                {
-                    $match: {
-                        roles: {
-                            $in: ['verified'],
-                        },
-                    },
-                },
-            ];
-            if (campaign.voterCutOffEndDate) {
-                aggregationPipeline.push({
-                    $match: {
-                        endDate: {
-                            $gt: new Date(campaign.voterCutOffEndDate),
-                        },
-                    },
-                });
-            }
-            if (campaign.voterMastersCutOffStartDate) {
-                aggregationPipeline.push({
-                    $project: {
-                        _id: 1,
-                        fullName: 1,
-                        degreeLevel: 1,
-                        branch: 1,
-                        startDate: 1,
-                        endDate: 1,
-                        courseLength: {
-                            $divide: [
-                                {
-                                    $subtract: ['$endDate', '$startDate'],
-                                },
-                                1000 * 60 * 60 * 24,
-                            ],
-                        },
-                    },
-                });
-                aggregationPipeline.push({
-                    $match: {
-                        $or: [
-                            {
-                                degreeLevel: {
-                                    $in: [
-                                        new RegExp('A-Level'),
-                                        new RegExp('S1'),
-                                        new RegExp('S3'),
-                                    ],
-                                },
-                            },
-                            {
-                                $and: [
-                                    {
-                                        degreeLevel: new RegExp('S2'),
-                                    },
-                                    {
-                                        $or: [
-                                            {
-                                                courseLength: {
-                                                    $gt: 365,
-                                                },
-                                            },
-                                            {
-                                                $and: [
-                                                    {
-                                                        courseLength: {
-                                                            $lte: 365,
-                                                        },
-                                                    },
-                                                    {
-                                                        startDate: {
-                                                            $gte: new Date(
-                                                                campaign.voterMastersCutOffStartDate
-                                                            ),
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                        ],
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                });
-            }
+            let aggregationPipeline = getEligibleListPipeline(campaign);
             aggregationPipeline.push({
                 $project: {
                     _id: 1,
@@ -1163,34 +1566,40 @@ exports.eligibleList = function (req, res) {
 
 /**
  * Checks if caller has voted in the specified campaign.
- * @name POST_/api/voting/:campaignID/hasVoted
+ * @name GET_/api/voting/:campaignID/hasVoted/:round
  * @param req.params.campaignID is the campaign ID
+ * @param req.params.round is the voting round
  * @return res.body.data is true or false
  */
 exports.hasVoted = function (req, res) {
     let voterId = String(res.locals.oauth.token.user._id);
     VotingCampaign.findById(
         req.params.campaignID,
-        { candidates: 1 },
+        { voting: 1 },
         (err, campaign) => {
             if (err) {
                 return res.status(500).json({
                     message: err.message,
                 });
             }
-            let all_voters = [].concat.apply(
-                [],
-                campaign.candidates.map((cand) => {
-                    return cand.votes;
-                })
-            );
-            if (all_voters.some((v) => v.toString() === voterId)) {
-                return res.status(200).json({
-                    data: true,
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Invalid campaign ID',
                 });
             }
+            if (campaign.voting.length <= req.params.round) {
+                return res.status(400).json({
+                    message: `There is no voting round ${
+                        req.params.round + 1
+                    } in this campaign`,
+                });
+            }
+            const hasVoted = campaign.voting[req.params.round].votes.has(
+                voterId
+            );
+
             return res.status(200).json({
-                data: false,
+                data: hasVoted,
             });
         }
     );
@@ -1198,9 +1607,10 @@ exports.hasVoted = function (req, res) {
 
 /**
  * Votes for the specified candidate in the specified campaign.
- * @name POST_/api/voting/:campaignID/vote/:userID
+ * @name POST_/api/voting/:campaignID/vote/:round/:candidateID
  * @param req.params.campaignID is the campaign ID
- * @param req.params.userID is the candidate ID
+ * @param req.params.round is the voting round
+ * @param req.params.candidateID is the candidate schema ID, NOT candidate user ID
  */
 exports.vote = async function (req, res) {
     try {
@@ -1230,13 +1640,21 @@ exports.vote = async function (req, res) {
                 message: 'Campaign is not found',
             });
         }
+        const round = req.params.round;
+        if (campaign.voting.length <= round) {
+            return res.status(400).json({
+                message: `There is no voting round ${
+                    round + 1
+                } in this campaign`,
+            });
+        }
         let current = new Date();
-        if (current < new Date(campaign.voteStart)) {
+        if (current < new Date(campaign.voting[round].startDate)) {
             return res.status(403).json({
                 message: 'The voting phase has not started.',
             });
         }
-        if (current > new Date(campaign.voteEnd)) {
+        if (current > new Date(campaign.voting[round].endDate)) {
             return res.status(403).json({
                 message: 'The voting phase has ended.',
             });
@@ -1247,11 +1665,25 @@ exports.vote = async function (req, res) {
                     'You are not eligible to vote due to your course end date.',
             });
         }
+        // TODO: decide if the below logic is needed!
+        // if (
+        //     !profile.degreeLevel.includes('S1') &&
+        //     !profile.degreeLevel.includes('S2') &&
+        //     !profile.degreeLevel.includes('S3') &&
+        //     !profile.degreeLevel.includes('A-Level')
+        // ) {
+        //     return res.status(403).json({
+        //         message:
+        //             'You are not eligible to vote due to your degree level.',
+        //     });
+        // }
         if (
             //TODO: how to decide if the Masters course is a 1 year course or not???
             profile.degreeLevel.includes('S2') &&
             !profile.degreeLevel.includes('S1') && //skipping integrated masters
             campaign.voterMastersCutOffStartDate &&
+            (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <=
+                365 && //TODO: how to decide if the Masters course is a 1 year course or not???
             profile.startDate < campaign.voterMastersCutOffStartDate
         ) {
             return res.status(403).json({
@@ -1259,41 +1691,24 @@ exports.vote = async function (req, res) {
                     'You are not eligible to vote due to your course start date.',
             });
         }
-        let all_voters = [].concat.apply(
-            [],
-            campaign.candidates.map((cand) => {
-                return cand.votes;
-            })
-        );
-        if (all_voters.some((v) => v.toString() === voterId)) {
+        if (campaign.voting[round].votes.has(voterId)) {
             return res.status(400).json({
                 message: 'You have already voted in this campaign',
             });
         }
-        let candidate = campaign.candidates.find(
-            ({ candidateID }) => String(candidateID) === req.params.userID
-        );
-        let candidateIndex = campaign.candidates.findIndex(
-            ({ candidateID }) => String(candidateID) === req.params.userID
-        );
-        if (!candidate) {
+
+        if (
+            !campaign.voting[round].candidates.includes(req.params.candidateID)
+        ) {
             return res.status(404).json({
                 message: 'Candidate ID not found in this campaign.',
             });
         }
-        if (candidate.votes.includes(voterId)) {
-            return res.status(400).json({
-                message: 'You have already voted in this campaign',
-            });
-        }
-        candidate.votes.push(mongoose.Types.ObjectId(voterId));
-        campaign.candidates[candidateIndex] = candidate;
 
+        campaign.voting[round].votes.set(voterId, req.params.candidateID);
         let savedCampaign = await campaign.save();
         if (savedCampaign) {
-            return res.status(200).json({
-                message: 'Voting successful.',
-            });
+            sendVotingSuccessEmail(voterId, req.params.candidateID, req, res);
         }
     } catch (err) {
         return res.status(500).json({
@@ -1301,6 +1716,81 @@ exports.vote = async function (req, res) {
         });
     }
 };
+
+async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
+    const hashValue = crypto
+        .createHash('md5')
+        .update(voterId + candidateId)
+        .digest('hex');
+
+    Profile.findById(
+        voterId,
+        { email: 1, emailPersonal: 1 },
+        function (err, profile) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!profile) {
+                return res.status(404).json({
+                    message: 'Invalid profile ID.',
+                });
+            }
+
+            let emails = [];
+            if (profile.email) {
+                emails.push(profile.email);
+            }
+            if (profile.emailPersonal) {
+                emails.push(profile.emailPersonal);
+            }
+            // FIXME: message should be dynamic
+            let message = {
+                from: 'KPU PPI UK - No Reply <kpuppiuk@gmail.com>', // sender address
+                replyTo: 'no-reply@example.com',
+                to: emails, // list of receivers
+                subject: 'Thank you for your vote', // Subject line
+                html: `<p>Thank you for taking your crucial role in shaping the PPI UK 2021/2022 through your vote in 
+                the first round of election. Please keep this email and this code: ${hashValue} as your receipt. </p>
+                <p><b>Inform your colleagues who are eligible as voters to vote in this round!
+                The vote portal will be available from 13 September 2021 at 00.00 BST to 14 September 2021 at 12.00 BST.</b></p>
+                <p>Post sticker yang terlampir dan mention @kpuppi_unitedkingdom pada Instagram story di akun Instagram yang Anda miliki.
+                Anda juga bisa memasukkan sticker KPU PPI UK yang relevan lainnya dengan memasukan kata kunci “@kpuppiuk” pada GIF di Instagram story Anda.</p>
+                <p>Updates about PPI UK General Election 2021:<br/>
+                Website <a href="https://ppiuk.org/pemilu">https://ppiuk.org/pemilu</a><br>
+                YouTube <a href="https://link.ppiuk.org/YoutubePemilu ">https://link.ppiuk.org/YoutubePemilu</a><br>
+                Instagram <a href="https://www.instagram.com/kpuppi_unitedkingdom/">@kpuppi_unitedkingdom</a>
+                </p>
+                <p>Send your enquiries to <a href="mailto:kpuppiuk@gmail.com">kpuppiuk@gmail.com</a></p>`, // html body
+                attachments: [
+                    {
+                        filename: 'vote-sticker.png',
+                        content: fs.createReadStream(
+                            path.join(
+                                __dirname,
+                                '..',
+                                'data',
+                                'vote-sticker.png'
+                            )
+                        ),
+                    },
+                ],
+            };
+
+            mailTransporter.sendMail(message, (err) => {
+                if (err) {
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+                return res.status(201).json({
+                    message: 'Voting successful and email sent',
+                });
+            });
+        }
+    );
+}
 
 /**
  * Find permission for the requested action and role

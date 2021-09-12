@@ -7,6 +7,7 @@ const AccessControl = require('accesscontrol');
 const ac = require(global.appRoot + '/config/roles');
 const utils = require('../utils');
 const allowedDomains = require('../../data/uniemails.json');
+const authController = require('./authController');
 
 const publicInfo = [
     '_id',
@@ -302,16 +303,16 @@ exports.viewPublic = function (req, res) {
  * @return res.body.data the newly updated profile
  */
 exports.update = function (req, res) {
-    if (req.body.password) {
-        return res.status(403).json({
-            message: "You don't have enough privilege to do this action",
-        });
-    }
-
     profileFilesUpload(req, res, async function (err) {
         if (err) {
             return res.status(err.code).json({
                 message: err.field,
+            });
+        }
+
+        if (req.body.password) {
+            return res.status(403).json({
+                message: "You don't have enough privilege to do this action",
             });
         }
 
@@ -336,6 +337,10 @@ exports.update = function (req, res) {
                         "You don't have enough privilege to do this action",
                 });
             }
+            if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+                return res.status(400).json({
+                    message: 'Email is not allowed',
+                });
             if (
                 req.body.branch &&
                 req.body.branch !== profile.branch &&
@@ -502,7 +507,10 @@ exports.updateSelf = function (req, res) {
             });
         }
 
-        if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+        if (
+            req.body.email &&
+            !allowedDomains.includes(req.body.email.match(/@(.*)/)[1])
+        )
             return res.status(400).json({
                 message: 'Email is not allowed',
             });
@@ -539,9 +547,29 @@ exports.updateSelf = function (req, res) {
             }
         }
 
+        let updateQuery = req.body;
+
+        if (
+            req.body.email ||
+            req.body.branch ||
+            req.body.fullName ||
+            req.body.dob ||
+            req.body.university ||
+            req.body.degreeLevel ||
+            req.body.startDate ||
+            req.body.endDate ||
+            req.body.studentProof
+        ) {
+            updateQuery['$pull'] = { roles: 'verified' };
+        }
+
+        if (req.body.email) {
+            updateQuery['emailVerified'] = false;
+        }
+
         Profile.findByIdAndUpdate(
             res.locals.oauth.token.user,
-            req.body,
+            updateQuery,
             { new: true },
             function (err, profile) {
                 if (err) {
@@ -560,10 +588,15 @@ exports.updateSelf = function (req, res) {
                     '*',
                     '!password',
                 ]);
-                return res.status(200).json({
-                    message: 'Own profile details updated successfully',
-                    data: filteredData,
-                });
+
+                if (req.body.email) {
+                    authController.sendVerificationEmail(profile, req, res);
+                } else {
+                    return res.status(200).json({
+                        message: 'Own profile details updated successfully',
+                        data: filteredData,
+                    });
+                }
             }
         );
     });

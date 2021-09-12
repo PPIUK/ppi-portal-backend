@@ -285,7 +285,7 @@ module.exports = (app) => {
         .get(votingCampaignController.activeVote);
     router
         .route('/voting/pubstats/:id')
-        .get(votingCampaignController.statistics);
+        .get(votingCampaignController.votersStatistics);
     router
         .route('/voting/admin')
         .post(
@@ -306,11 +306,45 @@ module.exports = (app) => {
             votingCampaignController.delete
         );
     router
+        .route('/voting/admin/:campaignID/round')
+        .post(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('createAny'),
+            votingCampaignController.newRound
+        );
+    router
+        .route('/voting/admin/:campaignID/round/:roundID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewRound)
+        .patch(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('updateAny'),
+            votingCampaignController.updateRound
+        )
+        .delete(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('deleteAny'),
+            votingCampaignController.deleteRound
+        );
+    router
+        .route('/voting/admin/:campaignID/round/:round/candidates')
+        .post(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('createAny'),
+            votingCampaignController.selectCandidates
+        );
+    router
         .route('/voting/admin/:campaignID/voters')
         .get(
             app.oauth.authenticate(),
             votingCampaignController.grantAccess('readAny'),
             votingCampaignController.eligibleList
+        );
+    router
+        .route('/voting/admin/:campaignID/stats')
+        .get(
+            app.oauth.authenticate(),
+            votingCampaignController.grantAccess('readAny'),
+            votingCampaignController.statistics
         );
     router
         .route('/voting/:campaignID')
@@ -357,13 +391,16 @@ module.exports = (app) => {
             votingCampaignController.viewMotivationEssay
         );
     router
-        .route('/voting/:campaignID/vote/:userID')
+        .route('/voting/:campaignID/vote/:round/:candidateID')
         .post(app.oauth.authenticate(), votingCampaignController.vote);
+    router
+        .route('/voting/:campaignID/round/:roundID')
+        .get(app.oauth.authenticate(), votingCampaignController.viewRound);
     router
         .route('/voting/:campaignID/eligibility')
         .get(app.oauth.authenticate(), votingCampaignController.eligibility);
     router
-        .route('/voting/:campaignID/hasVoted')
+        .route('/voting/:campaignID/hasVoted/:round')
         .get(app.oauth.authenticate(), votingCampaignController.hasVoted);
     // Export API routes
     return router;
