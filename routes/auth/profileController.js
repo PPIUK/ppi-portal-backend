@@ -288,6 +288,7 @@ exports.viewPublic = function (req, res) {
     });
 };
 
+const allowedDomains = require('../../data/uniemails.json');
 /**
  * Updates info a user. Can only be done by dataAccess role for user in their own branch.
  * @name PATCH_/api/profiles/:profile_id
@@ -335,6 +336,10 @@ exports.update = function (req, res) {
                         "You don't have enough privilege to do this action",
                 });
             }
+            if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
+                return res.status(400).json({
+                    message: 'Email is not allowed',
+                });
             if (
                 req.body.branch &&
                 req.body.branch !== profile.branch &&
