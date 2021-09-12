@@ -337,10 +337,11 @@ exports.update = function (req, res) {
                         "You don't have enough privilege to do this action",
                 });
             }
-            if (!allowedDomains.includes(req.body.email.match(/@(.*)/)[1]))
-                return res.status(400).json({
-                    message: 'Email is not allowed',
-                });
+
+            if (req.body.email) {
+                validateUniEmail(req, res);
+            }
+
             if (
                 req.body.branch &&
                 req.body.branch !== profile.branch &&
@@ -481,6 +482,26 @@ exports.viewSelf = function (req, res) {
     );
 };
 
+function validateUniEmail(req, res) {
+    const splits = req.body.email.split(/[@.]+/);
+    let rootDomain;
+    if (splits[splits.length - 1] === 'edu') {
+        rootDomain = splits.slice(-2).join('.');
+    } else if (splits.slice(-2).join('.') === 'ac.uk') {
+        rootDomain = splits.slice(-3).join('.');
+    } else {
+        return res.status(400).json({
+            message: 'Email is not allowed',
+        });
+    }
+    if (!allowedDomains.includes(rootDomain))
+        return res.status(400).json({
+            message: 'Email is not allowed',
+        });
+}
+
+exports.validateUniEmail = validateUniEmail;
+
 /**
  * Updates own profile info. Can also be called by basic role.
  * @name PATCH_/api/profiles/me
@@ -507,13 +528,9 @@ exports.updateSelf = function (req, res) {
             });
         }
 
-        if (
-            req.body.email &&
-            !allowedDomains.includes(req.body.email.match(/@(.*)/)[1])
-        )
-            return res.status(400).json({
-                message: 'Email is not allowed',
-            });
+        if (req.body.email) {
+            validateUniEmail(req, res);
+        }
 
         // cannot update own roles, wouldn't happen unless someone
         // crafted their own request hence the cheeky response
