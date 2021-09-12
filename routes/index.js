@@ -254,6 +254,13 @@ module.exports = (app) => {
             verifierController.flagged
         );
     router
+        .route('/verifier/blocked')
+        .get(
+            app.oauth.authenticate(),
+            verifierController.grantAccess('readAny'),
+            verifierController.blocked
+        );
+    router
         .route('/verifier/action/:userID')
         .post(
             app.oauth.authenticate(),

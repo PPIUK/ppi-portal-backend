@@ -9,7 +9,7 @@ exports.pending = function (req, res) {
     // get all non verified users with the same branch as requestee
     if (res.locals.oauth.token.user.branch !== 'All')
         query.where('branch').equals(res.locals.oauth.token.user.branch);
-    query.nin('roles', ['verified', 'flagged']);
+    query.nin('roles', ['verified', 'flagged', 'blocked']);
 
     query.exec().then((val) =>
         res.status(200).json({
@@ -24,7 +24,7 @@ exports.flagged = function (req, res) {
     // get all flagged users with the same branch as requestee
     if (res.locals.oauth.token.user.branch !== 'All')
         query.where('branch').equals(res.locals.oauth.token.user.branch);
-    query.nin('roles', 'verified');
+    query.nin('roles', ['verified', 'blocked']);
     query.in('roles', 'flagged');
 
     query.exec().then((val) =>
@@ -34,8 +34,24 @@ exports.flagged = function (req, res) {
     );
 };
 
+exports.blocked = function (req, res) {
+    let query = Profile.find();
+
+    // get all blocked users with the same branch as requestee
+    if (res.locals.oauth.token.user.branch !== 'All')
+        query.where('branch').equals(res.locals.oauth.token.user.branch);
+    query.nin('roles', ['verified', 'flagged']);
+    query.in('roles', 'blocked');
+
+    query.exec().then((val) =>
+        res.status(200).json({
+            profiles: val,
+        })
+    );
+};
+
 exports.action = function (req, res) {
-    if (!['verified', 'flagged'].includes(req.body.action))
+    if (!['verified', 'flagged', 'blocked'].includes(req.body.action))
         return res.status(400).json({
             message: 'Invalid action',
         });
@@ -51,6 +67,11 @@ exports.action = function (req, res) {
         .then((profile) => {
             if (profile.roles.includes(req.body.action))
                 return res.sendStatus(201);
+            if (req.body.action === 'flagged')
+                profile.roles = profile.roles.filter((e) => e !== 'blocked');
+            if (req.body.action === 'blocked')
+                profile.roles = profile.roles.filter((e) => e !== 'flagged');
+
             profile.roles.push(req.body.action);
             profile
                 .save()
