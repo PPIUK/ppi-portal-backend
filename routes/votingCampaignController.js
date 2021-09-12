@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
 const dfd = require('danfojs-node');
-var crypto = require('crypto');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const VotingCandidate = mongoose.model('VotingCandidate');
 const VotingRound = mongoose.model('VotingRound');
@@ -1753,12 +1755,27 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
                 the first round of election. Please keep this email and this code: ${hashValue} as your receipt. </p>
                 <p><b>Inform your colleagues who are eligible as voters to vote in this round!
                 The vote portal will be available from 13 September 2021 at 00.00 BST to 14 September 2021 at 12.00 BST.</b></p>
+                <p>Post sticker yang terlampir dan mention @kpuppi_unitedkingdom pada Instagram story di akun Instagram yang Anda miliki.
+                Anda juga bisa memasukkan sticker KPU PPI UK yang relevan lainnya dengan memasukan kata kunci “@kpuppiuk” pada GIF di Instagram story Anda.</p>
                 <p>Updates about PPI UK General Election 2021:<br/>
                 Website <a href="https://ppiuk.org/pemilu">https://ppiuk.org/pemilu</a><br>
                 YouTube <a href="https://link.ppiuk.org/YoutubePemilu ">https://link.ppiuk.org/YoutubePemilu</a><br>
                 Instagram <a href="https://www.instagram.com/kpuppi_unitedkingdom/">@kpuppi_unitedkingdom</a>
                 </p>
                 <p>Send your enquiries to <a href="mailto:kpuppiuk@gmail.com">kpuppiuk@gmail.com</a></p>`, // html body
+                attachments: [
+                    {
+                        filename: 'vote-sticker.png',
+                        content: fs.createReadStream(
+                            path.join(
+                                __dirname,
+                                '..',
+                                'data',
+                                'vote-sticker.png'
+                            )
+                        ),
+                    },
+                ],
             };
 
             mailTransporter.sendMail(message, (err) => {
