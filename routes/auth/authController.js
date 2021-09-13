@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
 const dedent = require('dedent');
+const crypto = require('crypto');
 
 const Profile = mongoose.model('Profile');
 const Token = mongoose.model('VerificationToken');
 const AccessToken = mongoose.model('AccessToken');
+const RefreshToken = mongoose.model('RefreshToken');
 
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
@@ -534,3 +536,58 @@ async function sendVerificationEmail(profile, req, res) {
 }
 
 module.exports.sendVerificationEmail = sendVerificationEmail;
+
+// TODO: remove
+exports.createAccessToken = function (req, res) {
+    Profile.findOne(
+        { temporaryToken: req.body.token },
+        { password: 0 },
+        function (err, profile) {
+            if (err) {
+                logger.error(`Error in createAccessToken: ${err}`);
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            const exp = new Date();
+            exp.setHours(exp.getHours() + 1);
+
+            const token = crypto.randomBytes(40).toString('hex');
+            let accessToken = new AccessToken();
+            accessToken.accessToken = token;
+            accessToken.accessTokenExpiresAt = exp;
+            accessToken.user = profile._id;
+            accessToken.client = 'api';
+            accessToken.save(function (err) {
+                if (err) {
+                    logger.error(`Error in createAccessToken: ${err}`);
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+            });
+
+            const rToken = crypto.randomBytes(40).toString('hex');
+            let refreshToken = new RefreshToken();
+            refreshToken.refreshToken = rToken;
+            refreshToken.refreshTokenExpiresAt = exp;
+            refreshToken.user = profile._id;
+            refreshToken.client = 'api';
+            refreshToken.save(function (err) {
+                if (err) {
+                    logger.error(`Error in createAccessToken: ${err}`);
+                    return res.status(500).json({
+                        message: err.message,
+                    });
+                }
+            });
+
+            return res.status(200).json({
+                access_token: token,
+                token_type: 'Bearer',
+                expires_in: 3599,
+                refresh_token: rToken,
+            });
+        }
+    );
+};

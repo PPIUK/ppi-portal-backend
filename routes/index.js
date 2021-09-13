@@ -149,6 +149,10 @@ module.exports = (app) => {
             },
         })
     );
+    // TODO: remove
+    router
+        .route('/auth/create-access-token')
+        .post(authController.createAccessToken);
 
     let thesisController = require('./thesisController');
     router
