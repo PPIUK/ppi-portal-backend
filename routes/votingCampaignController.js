@@ -14,6 +14,7 @@ const ac = require(global.appRoot + '/config/roles');
 
 const utils = require('./utils');
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
+const logger = require(global.appRoot + '/config/winston');
 
 const campaignBannerStorage = new GridFsStorage({
     url: process.env.DBURL,
@@ -363,6 +364,8 @@ exports.statistics = async function (req, res) {
                     };
                 });
 
+                logger.info(JSON.stringify(profiles));
+
                 if (profiles.length > 0) {
                     const df = new dfd.DataFrame(profiles);
 
@@ -372,6 +375,7 @@ exports.statistics = async function (req, res) {
                         .to_json()
                         .then((json) => {
                             const data = JSON.parse(json);
+                            logger.info(JSON.stringify(data));
 
                             roundStatistics.candidateToBranch = reshapeStatistics(
                                 data,
@@ -404,6 +408,7 @@ exports.statistics = async function (req, res) {
 };
 
 function reshapeStatistics(data, outerKey, childrenKey, candidates) {
+    logger.info(`Reshaping stats ${outerKey}`);
     const statsObj = {};
     data.forEach((datum) => {
         let single = {};
@@ -437,6 +442,7 @@ function reshapeStatistics(data, outerKey, childrenKey, candidates) {
             }
         }
     }
+    logger.info(JSON.stringify(statsArray));
     return statsArray;
 }
 
