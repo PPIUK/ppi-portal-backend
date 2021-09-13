@@ -397,12 +397,12 @@ exports.statistics = async function (req, res) {
                         });
                 }
 
-                logger.info(roundStatistics);
+                logger.info(JSON.stringify(roundStatistics));
 
                 statistics.push(roundStatistics);
             }
             logger.info('stats');
-            logger.info(statistics);
+            logger.info(JSON.stringify(statistics));
             return res.status(200).json({
                 message: 'Campaign statistics returned.',
                 data: statistics,
