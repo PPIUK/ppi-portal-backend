@@ -9,6 +9,8 @@ const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
 const profileController = require('./profileController');
 
+const logger = require('../../config/winston');
+
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
  */
@@ -457,6 +459,7 @@ exports.resetPassword = function (req, res) {
             }
 
             let profile = await Profile.findOne({ _id: token.userId });
+            logger.info(`Resetting password for ${token.userId}`);
             if (!profile) {
                 return res.status(404).json({
                     message: 'Profile for this token is not found.',
@@ -471,6 +474,7 @@ exports.resetPassword = function (req, res) {
                 message: 'Password reset successful.',
             });
         } catch (err) {
+            logger.error(err);
             return res.status(500).json({
                 message: err.message,
             });
