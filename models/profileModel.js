@@ -152,6 +152,11 @@ var profileSchema = new mongoose.Schema({
             'thesisAdmin',
         ],
     },
+    // TODO: remove
+    temporaryToken: {
+        type: String,
+        required: false,
+    },
 });
 
 profileSchema.pre('findOneAndUpdate', function (next) {

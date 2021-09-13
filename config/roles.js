@@ -28,15 +28,15 @@ const grants = {
         profile: {
             'read:own': ['*', '!__v'],
             'update:own': ['*', '!_id', '!__v'],
-            'create:any': ['*', '!_id', '!__v', '!password'],
-            'read:any': ['*', '!__v', '!password'],
-            'update:any': ['*', '!_id', '!__v', '!password'],
+            'create:any': ['*', '!_id', '!__v', '!password', '!temporaryToken'], //TODO remove
+            'read:any': ['*', '!__v', '!password', '!temporaryToken'],
+            'update:any': ['*', '!_id', '!__v', '!password', '!temporaryToken'],
             'delete:any': ['*'],
         },
     },
     verifier: {
         profile: {
-            'read:any': ['*', '!__v', '!password'],
+            'read:any': ['*', '!__v', '!password', '!temporaryToken'],
             'update:any': ['roles'],
             'delete:any': ['*'],
         },
