@@ -1412,6 +1412,14 @@ exports.eligibility = async function (req, res) {
             data: false,
         });
     }
+    if (
+        (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <
+        180 //FIXME: magic number
+    ) {
+        return res.status(403).json({
+            message: 'You are not eligible to vote due to your course length.',
+        });
+    }
 
     if (
         profile.degreeLevel.includes('S2') &&
@@ -1440,6 +1448,31 @@ function getEligibleListPipeline(campaign) {
             },
         },
     ];
+    aggregationPipeline.push({
+        $project: {
+            _id: 1,
+            fullName: 1,
+            degreeLevel: 1,
+            branch: 1,
+            startDate: 1,
+            endDate: 1,
+            courseLength: {
+                $divide: [
+                    {
+                        $subtract: ['$endDate', '$startDate'],
+                    },
+                    1000 * 60 * 60 * 24,
+                ],
+            },
+        },
+    });
+    aggregationPipeline.push({
+        $match: {
+            courseLength: {
+                $gte: 180, // FIXME: magic number
+            },
+        },
+    });
     if (campaign.voterCutOffEndDate) {
         aggregationPipeline.push({
             $match: {
@@ -1450,24 +1483,6 @@ function getEligibleListPipeline(campaign) {
         });
     }
     if (campaign.voterMastersCutOffStartDate) {
-        aggregationPipeline.push({
-            $project: {
-                _id: 1,
-                fullName: 1,
-                degreeLevel: 1,
-                branch: 1,
-                startDate: 1,
-                endDate: 1,
-                courseLength: {
-                    $divide: [
-                        {
-                            $subtract: ['$endDate', '$startDate'],
-                        },
-                        1000 * 60 * 60 * 24,
-                    ],
-                },
-            },
-        });
         aggregationPipeline.push({
             $match: {
                 $or: [
@@ -1671,6 +1686,15 @@ exports.vote = async function (req, res) {
             return res.status(403).json({
                 message:
                     'You are not eligible to vote due to your course end date.',
+            });
+        }
+        if (
+            (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <
+            180 //FIXME: magic number
+        ) {
+            return res.status(403).json({
+                message:
+                    'You are not eligible to vote due to your course length.',
             });
         }
         // TODO: decide if the below logic is needed!
