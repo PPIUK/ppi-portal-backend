@@ -317,6 +317,7 @@ exports.statistics = async function (req, res) {
                     message: 'Campaign not found',
                 });
             }
+            let promises = [];
             let statistics = [];
             for (let round of campaign.voting) {
                 let roundStatistics = {};
@@ -364,48 +365,48 @@ exports.statistics = async function (req, res) {
                     };
                 });
 
-                // logger.info(JSON.stringify(profiles));
-
                 if (profiles.length > 0) {
                     const df = new dfd.DataFrame(profiles);
 
                     let grp = df.groupby(['candidateID', 'branch']);
-                    grp.agg({ id: 'count' })
-                        .rename({ mapper: { id_count: 'votes' } })
-                        .to_json()
-                        .then((json) => {
-                            const data = JSON.parse(json);
-                            // logger.info(JSON.stringify(data));
+                    promises.push(
+                        grp
+                            .agg({ id: 'count' })
+                            .rename({ mapper: { id_count: 'votes' } })
+                            .to_json()
+                            .then((json) => {
+                                const data = JSON.parse(json);
 
-                            roundStatistics.candidateToBranch = reshapeStatistics(
-                                data,
-                                'candidateID',
-                                'branch',
-                                candidates
-                            );
-                            roundStatistics.branchToCandidate = reshapeStatistics(
-                                data,
-                                'branch',
-                                'candidateID',
-                                candidates
-                            );
-                        })
-                        .catch((err) => {
-                            return res.status(500).json({
-                                message: err,
-                            });
-                        });
+                                roundStatistics.candidateToBranch = reshapeStatistics(
+                                    data,
+                                    'candidateID',
+                                    'branch',
+                                    candidates
+                                );
+                                roundStatistics.branchToCandidate = reshapeStatistics(
+                                    data,
+                                    'branch',
+                                    'candidateID',
+                                    candidates
+                                );
+
+                                statistics.push(roundStatistics);
+                            })
+                            .catch((err) => {
+                                return res.status(500).json({
+                                    message: err,
+                                });
+                            })
+                    );
+                } else {
+                    statistics.push(roundStatistics);
                 }
-
-                logger.info(JSON.stringify(roundStatistics));
-
-                statistics.push(roundStatistics);
             }
-            logger.info('stats');
-            logger.info(JSON.stringify(statistics));
-            return res.status(200).json({
-                message: 'Campaign statistics returned.',
-                data: statistics,
+            Promise.all(promises).then(() => {
+                return res.status(200).json({
+                    message: 'Campaign statistics returned.',
+                    data: statistics,
+                });
             });
         }
     );
