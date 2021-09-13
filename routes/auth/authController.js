@@ -468,7 +468,7 @@ exports.resetPassword = function (req, res) {
 
             await profile.setPassword(req.body.password);
             profile.emailVerified = true;
-            await profile.save();
+            await profile.save({ validateBeforeSave: false });
 
             return res.status(200).json({
                 message: 'Password reset successful.',
