@@ -364,7 +364,7 @@ exports.statistics = async function (req, res) {
                     };
                 });
 
-                logger.info(JSON.stringify(profiles));
+                // logger.info(JSON.stringify(profiles));
 
                 if (profiles.length > 0) {
                     const df = new dfd.DataFrame(profiles);
@@ -375,7 +375,7 @@ exports.statistics = async function (req, res) {
                         .to_json()
                         .then((json) => {
                             const data = JSON.parse(json);
-                            logger.info(JSON.stringify(data));
+                            // logger.info(JSON.stringify(data));
 
                             roundStatistics.candidateToBranch = reshapeStatistics(
                                 data,
@@ -397,8 +397,12 @@ exports.statistics = async function (req, res) {
                         });
                 }
 
+                logger.info(roundStatistics);
+
                 statistics.push(roundStatistics);
             }
+            logger.info('stats');
+            logger.info(statistics);
             return res.status(200).json({
                 message: 'Campaign statistics returned.',
                 data: statistics,
@@ -442,7 +446,7 @@ function reshapeStatistics(data, outerKey, childrenKey, candidates) {
             }
         }
     }
-    logger.info(JSON.stringify(statsArray));
+    // logger.info(JSON.stringify(statsArray));
     return statsArray;
 }
 
