@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Profile = mongoose.model('Profile');
 
 const ac = require(global.appRoot + '/config/roles');
+const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
 exports.pending = function (req, res) {
     let query = Profile.find();
@@ -75,10 +76,40 @@ exports.action = function (req, res) {
             profile.roles.push(req.body.action);
             profile
                 .save()
-                .then(() => res.sendStatus(201))
+                .then(() => {
+                    if (req.body.action === 'verified') {
+                        sendVerifiedNotificationEmail(profile, req, res);
+                    } else {
+                        res.sendStatus(201);
+                    }
+                })
                 .catch(() => res.status(500).json({ message: 'Server erro' }));
         });
 };
+
+async function sendVerifiedNotificationEmail(profile, req, res) {
+    let message = {
+        from: 'PPI UK Member Portal - No Reply <ppiunitedkingdom@gmail.com>', // sender address
+        replyTo: 'no-reply@example.com',
+        to: profile.email, // list of receivers
+        cc: profile.emailPersonal,
+        subject: 'Your account is now verified', // Subject line
+        html: `<p>Thank you for registering to <a href="https://portal.ppiuk.org/">Portal PPI UK</a>. 
+                Your account is now verified. Please login to 
+                <a href="https://portal.ppiuk.org/">portal.ppiuk.org/</a></p>`, // html body
+    };
+
+    mailTransporter.sendMail(message, (err) => {
+        if (err) {
+            return res.status(500).json({
+                message: err.message,
+            });
+        }
+        return res.status(201).json({
+            message: 'Account verified and email sent',
+        });
+    });
+}
 
 exports.delete = function (req, res) {
     Profile.findOne({ _id: req.params.userID })
