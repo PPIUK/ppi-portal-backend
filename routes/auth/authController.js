@@ -470,6 +470,7 @@ exports.resetPassword = function (req, res) {
             }
 
             await profile.setPassword(req.body.password);
+            profile.emailVerified = true;
             await profile.save();
 
             return res.status(200).json({
