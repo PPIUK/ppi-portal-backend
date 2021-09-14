@@ -321,7 +321,7 @@ exports.verifyEmail = function (req, res) {
             }
 
             profile.emailVerified = true;
-            await profile.save();
+            await profile.save({ validateBeforeSave: false });
             return res.status(200).json({
                 message: 'This account is now verified. Please log in.',
             });
