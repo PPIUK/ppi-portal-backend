@@ -9,6 +9,9 @@ const utils = require('../utils');
 const allowedDomains = require('../../data/uniemails.json');
 const authController = require('./authController');
 
+const logger = require('../../config/winston');
+const { logGeneralError } = require('../../config/logging-tools')(logger);
+
 const publicInfo = [
     '_id',
     'fullName',
@@ -72,6 +75,7 @@ exports.index = function (req, res) {
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
+            logGeneralError(req, err, 'Error getting all profiles');
             return res.status(500).json({
                 message: err.message,
             });
@@ -120,6 +124,7 @@ exports.indexPublic = function (req, res) {
 
     Profile.aggregatePaginate(aggregate, options, function (err, profiles) {
         if (err) {
+            logGeneralError(req, err, 'Error getting all public profiles');
             return res.status(500).json({
                 message: err.message,
             });
@@ -235,6 +240,7 @@ exports.view = function (req, res) {
                     message: 'Id not found',
                 });
             } else if (err) {
+                logGeneralError(req, err, 'Error retrieving user information');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -278,6 +284,7 @@ exports.viewPublic = function (req, res) {
                 message: 'Id not found',
             });
         } else if (err) {
+            logGeneralError(req, err, 'Error getting public profile info');
             return res.status(500).json({
                 message: err.message,
             });
@@ -323,6 +330,7 @@ exports.update = function (req, res) {
                 });
             }
             if (err) {
+                logGeneralError(req, err, 'Error updating profile');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -361,6 +369,7 @@ exports.update = function (req, res) {
                 { new: true },
                 function (err, profile) {
                     if (err) {
+                        logGeneralError(req, err, 'Error updating profile');
                         return res.status(500).json({
                             message: err.message,
                         });
@@ -396,6 +405,7 @@ exports.delete = function (req, res) {
             });
         }
         if (err) {
+            logGeneralError(req, err, 'Error deleting profile');
             return res.status(500).json({
                 message: err.message,
             });
@@ -411,6 +421,7 @@ exports.delete = function (req, res) {
 
         Profile.findByIdAndDelete(req.params.profile_id, function (err) {
             if (err) {
+                logGeneralError(req, err, 'Error deleting profile');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -445,6 +456,11 @@ function deleteFileFromBucket(bucket, attribute, res) {
                     message: 'File not found',
                 });
             }
+            logGeneralError(
+                {},
+                err,
+                'Error deleting file (deleteFileFromBucket)'
+            );
             return res.status(500).json({
                 message: err.message,
             });
@@ -466,6 +482,7 @@ exports.viewSelf = function (req, res) {
         { password: 0, __v: 0 },
         function (err, profile) {
             if (err) {
+                logGeneralError(req, err, 'Error retrieving self profile');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -590,6 +607,7 @@ exports.updateSelf = function (req, res) {
             { new: true },
             function (err, profile) {
                 if (err) {
+                    logGeneralError(req, err, 'Error retrieving self profile');
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -638,6 +656,7 @@ exports.verify = function (req, res) {
             });
         }
         if (err) {
+            logGeneralError(req, err, 'Error in manual profile verification');
             return res.status(500).json({
                 message: err.message,
             });
@@ -681,6 +700,15 @@ exports.viewOwnStudentProofFile = function (req, res) {
         res.locals.oauth.token.user,
         { studentProof: 1 },
         (err, profile) => {
+            if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error retrieving self student proof'
+                );
+                res.status(500).json({ message: err.message });
+            }
+            if (!profile) res.sendStatus(404);
             utils.sendFile('studentProof', 'profilefiles', profile, err, res);
         }
     );
@@ -765,7 +793,14 @@ exports.search = {
         Profile.find(
             { fullName: { $regex: req.query.name, $options: 'i' } },
             (err, profiles) => {
-                if (err) return res.status(500).json({ message: err.message });
+                if (err) {
+                    logGeneralError(
+                        req,
+                        err,
+                        'Error searching profiles by name'
+                    );
+                    return res.status(500).json({ message: err.message });
+                }
 
                 profiles.forEach(
                     (profile) => (profile._doc._id = profile._id.toString())

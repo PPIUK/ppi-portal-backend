@@ -9,6 +9,9 @@ const Thesis = mongoose.model('Thesis');
 const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
 
+const logger = require('../config/winston');
+const { logGeneralError } = require('../config/logging-tools')(logger);
+
 const thesisStorage = new GridFsStorage({
     url: process.env.DBURL,
     file: (req, file) => {
@@ -84,7 +87,8 @@ exports.new = function (req, res) {
         thesis = await processThesis(req, thesis);
         thesis.save(function (err) {
             if (err) {
-                return res.status(400).json({
+                logGeneralError(req, err, 'Error submitting new thesis upload');
+                return res.status(500).json({
                     message: err.message,
                 });
             }
@@ -211,6 +215,7 @@ exports.view = function (req, res) {
                 message: 'Thesis ID not found!',
             });
         } else if (err) {
+            logGeneralError(req, err, 'Error retrieving thesis');
             return res.status(500).json({
                 message: err.message,
             });
@@ -309,8 +314,9 @@ exports.search = function (req, res) {
                 ),
             });
         })
-        .catch(() => {
-            res.status(500);
+        .catch((err) => {
+            logGeneralError(req, err, 'Error searching thesis');
+            res.status(500).json({ message: err.message });
         });
 };
 
@@ -413,6 +419,7 @@ exports.feed = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(req, err, 'Error retrieving thesis feed/index');
             return res.status(500).json({
                 message: err.message,
             });
@@ -441,6 +448,7 @@ exports.viewFile = function (req, res) {
                     message: 'There is no file associated with this Thesis ID',
                 });
             } else if (err) {
+                logGeneralError(req, err, 'Error retrieving pdf for thesis');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -454,6 +462,7 @@ exports.viewFile = function (req, res) {
                         message: 'File not found',
                     });
                 }
+                logGeneralError(req, err, 'Error retrieving pdf for thesis');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -479,6 +488,7 @@ exports.delete = function (req, res) {
                 message: 'Thesis ID not found',
             });
         } else if (err) {
+            logGeneralError(req, err, 'Error deleting thesis');
             return res.status(500).json({
                 message: err.message,
             });
@@ -497,6 +507,7 @@ exports.delete = function (req, res) {
                             message: 'File not found',
                         });
                     }
+                    logGeneralError(req, err, 'Error deleting thesis');
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -506,6 +517,7 @@ exports.delete = function (req, res) {
 
         Thesis.remove({ _id: thesis._id }, (err) => {
             if (err) {
+                logGeneralError(req, err, 'Error deleting thesis');
                 return res.status(500).json({
                     message: err.message,
                 });

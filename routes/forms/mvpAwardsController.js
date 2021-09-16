@@ -1,11 +1,7 @@
 const mongoose = require('mongoose');
-const dedent = require('dedent');
 const fs = require('fs');
 
 const MvpAwardsForm = mongoose.model('MvpAwardsForm');
-const Profile = mongoose.model('Profile');
-
-const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
 const ac = require(global.appRoot + '/config/roles');
 

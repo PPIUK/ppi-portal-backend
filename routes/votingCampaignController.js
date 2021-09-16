@@ -15,6 +15,9 @@ const ac = require(global.appRoot + '/config/roles');
 const utils = require('./utils');
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
+const logger = require('../config/winston');
+const { logGeneralError } = require('../config/logging-tools')(logger);
+
 const campaignBannerStorage = new GridFsStorage({
     url: process.env.DBURL,
     file: (req, file) => {
@@ -68,6 +71,7 @@ exports.index = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(req, err, 'Error retrieving campaigns');
             return res.status(500).json({
                 message: err.message,
             });
@@ -95,6 +99,7 @@ exports.archived = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(req, err, 'Error retrieving archived campaigns');
             return res.status(500).json({
                 message: err.message,
             });
@@ -123,6 +128,7 @@ exports.active = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(req, err, 'Error retrieving active campaigns');
             return res.status(500).json({
                 message: err.message,
             });
@@ -152,6 +158,11 @@ exports.activeNominate = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(
+                req,
+                err,
+                'Error retrieving nomination phase campaigns'
+            );
             return res.status(500).json({
                 message: err.message,
             });
@@ -186,6 +197,11 @@ exports.activeVote = function (req, res) {
             });
         })
         .catch((err) => {
+            logGeneralError(
+                req,
+                err,
+                'Error retrieving voting phase campaigns'
+            );
             return res.status(500).json({
                 message: err.message,
             });
@@ -198,6 +214,7 @@ exports.votersStatistics = async function (req, res) {
         { voting: 1, voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
         async function (err, campaign) {
             if (err) {
+                logGeneralError(req, err, `Error retrieving voter statistics`);
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -307,6 +324,11 @@ exports.statistics = async function (req, res) {
     VotingCampaign.findById(req.params.campaignID, { voting: 1 }).exec(
         async function (err, campaign) {
             if (err) {
+                logGeneralError(
+                    err,
+                    req,
+                    'Error retrieving campaign statistics'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -392,6 +414,11 @@ exports.statistics = async function (req, res) {
                                 statistics.push(roundStatistics);
                             })
                             .catch((err) => {
+                                logGeneralError(
+                                    req,
+                                    err,
+                                    `Error retrieving statistics for ${campaign.name}`
+                                );
                                 return res.status(500).json({
                                     message: err,
                                 });
@@ -567,6 +594,7 @@ exports.delete = function (req, res) {
                 message: 'Campaign ID not found',
             });
         } else if (err) {
+            logGeneralError(req, err, 'Error deleting campaign');
             return res.status(500).json({
                 message: err.message,
             });
@@ -587,6 +615,11 @@ exports.delete = function (req, res) {
                                 message: 'File not found',
                             });
                         }
+                        logGeneralError(
+                            req,
+                            err,
+                            `Error deleting files for campaign ${campaign.name}`
+                        );
                         return res.status(500).json({
                             message: err.message,
                         });
@@ -597,6 +630,7 @@ exports.delete = function (req, res) {
 
         VotingCampaign.findByIdAndRemove(campaign._id, (err) => {
             if (err) {
+                logGeneralError(req, err, 'Error deleting campaign');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -613,7 +647,10 @@ exports.delete = function (req, res) {
  */
 exports.newRound = function (req, res) {
     VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
-        if (err) res.sendStatus(500);
+        if (err) {
+            logGeneralError(req, err, 'Error creating new voting round');
+            return res.status(500).json({ message: err.message });
+        }
         let newRound = new VotingRound({
             ...req.body,
             candidates: [],
@@ -625,7 +662,14 @@ exports.newRound = function (req, res) {
         campaign
             .save()
             .then(() => res.json({ data: newRoundID }))
-            .catch((err) => res.status(500).json({ data: err }));
+            .catch((err) => {
+                logGeneralError(
+                    req,
+                    err,
+                    `Error saving new voting round for ${campaign.name}`
+                );
+                res.status(500).json({ data: err });
+            });
     });
 };
 
@@ -634,7 +678,11 @@ exports.newRound = function (req, res) {
  */
 exports.viewRound = function (req, res) {
     VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
-        if (err) res.sendStatus(500);
+        if (err) {
+            logGeneralError(req, err, 'Error retrieving voting round');
+            return res.status(500).json({ message: err.message });
+        }
+        if (!campaign) return res.sendStatus(404);
         if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
         res.json({
             data: {
@@ -650,7 +698,11 @@ exports.viewRound = function (req, res) {
  */
 exports.updateRound = function (req, res) {
     VotingCampaign.findById(req.params.campaignID, (err, campaign) => {
-        if (err) res.sendStatus(500);
+        if (err) {
+            logGeneralError(req, err, 'Error updating voting round');
+            return res.status(500).json({ message: err.message });
+        }
+        if (!campaign) return res.sendStatus(404);
         if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
         campaign.voting[req.params.roundID].startDate = req.body.startDate;
         campaign.voting[req.params.roundID].endDate = req.body.endDate;
@@ -658,7 +710,14 @@ exports.updateRound = function (req, res) {
         campaign
             .save()
             .then((newCampaign) => res.json({ data: newCampaign }))
-            .catch((err) => res.status(500).json({ data: err }));
+            .catch((err) => {
+                logGeneralError(
+                    req,
+                    err,
+                    `Error updating voting round for ${campaign.name}`
+                );
+                res.status(500).json({ data: err });
+            });
     });
 };
 
@@ -674,13 +733,20 @@ exports.deleteRound = function (req, res) {
         campaign
             .save()
             .then((newCampaign) => res.json({ data: newCampaign }))
-            .catch(() => res.sendStatus(500));
+            .catch((err) => {
+                logGeneralError(
+                    req,
+                    err,
+                    `Error deleting voting round for ${campaign.name}`
+                );
+                res.status(500).json({ data: err });
+            });
     });
 };
 
 /**
  * View information about the specified voting campaign, including the list of candidates.
- * The list of voters for each candidate is not included, for now.  TODO: change this to return statistics instead
+ * The list of voters for each candidate is not included, for now.
  * Fields that are supposed to be a file are returned as the ID of the file, where the file itself can be retrieved
  * using the respective view endpoints.
  * @name GET_/api/voting/:campaignID
@@ -693,10 +759,16 @@ exports.view = function (req, res) {
         { 'voting.votes': 0 },
         function (err, campaign) {
             if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error retrieving general voting campaign information'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
             }
+            if (!campaign) return res.sendStatus(404);
 
             return res.status(200).json({
                 message: 'Campaign returned.',
@@ -736,6 +808,11 @@ exports.viewCampaignBanner = function (req, res) {
 exports.newNomination = function (req, res) {
     candidateFilesUpload(req, res, async function (err) {
         if (err) {
+            logGeneralError(
+                req,
+                err,
+                'Error uploading files for new candidate'
+            );
             return res.status(err.code).json({
                 message: err.field,
             });
@@ -780,6 +857,7 @@ exports.newNomination = function (req, res) {
             {},
             function (err, campaign) {
                 if (err) {
+                    logGeneralError(req, err, 'Error nominating new candidate');
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -867,6 +945,11 @@ exports.newNomination = function (req, res) {
 exports.updateNomination = function (req, res) {
     candidateFilesUpload(req, res, function (err) {
         if (err) {
+            logGeneralError(
+                req,
+                err,
+                'Error uploading files for nomination candidate update'
+            );
             return res.status(err.code).json({
                 message: err.field,
             });
@@ -923,6 +1006,7 @@ exports.updateNomination = function (req, res) {
             { nominateStart: 1, nominateEnd: 1 },
             function (err, campaign) {
                 if (err) {
+                    logGeneralError(req, err, 'Error updating nomination');
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -955,6 +1039,11 @@ exports.updateNomination = function (req, res) {
                     { useFindAndModify: false },
                     function (err, campaign) {
                         if (err) {
+                            logGeneralError(
+                                req,
+                                err,
+                                'Error updating nomination'
+                            );
                             return res.status(500).json({
                                 message: err.message,
                             });
@@ -992,6 +1081,11 @@ exports.updateNomination = function (req, res) {
                         });
 
                         if (deleteError) {
+                            logGeneralError(
+                                req,
+                                err,
+                                'Error deleting files for candidate nomination update'
+                            );
                             return res.status(500).json({
                                 message: deleteError.message,
                             });
@@ -1041,6 +1135,11 @@ async function sendCompletedSubmissionEmail(candidateId, req, res) {
         { email: 1, emailPersonal: 1 },
         function (err, profile) {
             if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error sending submission complete email'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -1072,6 +1171,11 @@ async function sendCompletedSubmissionEmail(candidateId, req, res) {
 
             mailTransporter.sendMail(message, (err) => {
                 if (err) {
+                    logGeneralError(
+                        req,
+                        err,
+                        'Error sending submission complete email'
+                    );
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -1214,6 +1318,7 @@ function findCandidateAndSendFile(
     bucketName
 ) {
     if (err) {
+        logGeneralError(req, err, 'Error sending candidate file');
         return res.status(500).json({
             message: err.message,
         });
@@ -1326,6 +1431,11 @@ exports.selectCandidates = function (req, res) {
         { candidatePool: 1, voting: 1 },
         function (err, campaign) {
             if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error selecting candidates for campaign'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -1552,6 +1662,11 @@ exports.eligibleList = function (req, res) {
         { voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
         function (err, campaign) {
             if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error retrieving eligible voter list'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -1601,6 +1716,7 @@ exports.hasVoted = function (req, res) {
         { voting: 1 },
         (err, campaign) => {
             if (err) {
+                logGeneralError(req, err, 'Error retrieving has voted list');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -1743,6 +1859,7 @@ exports.vote = async function (req, res) {
             sendVotingSuccessEmail(voterId, req.params.candidateID, req, res);
         }
     } catch (err) {
+        logGeneralError(req, err, 'Error voting in campaign');
         return res.status(500).json({
             message: err.message,
         });
@@ -1760,6 +1877,11 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
         { email: 1, emailPersonal: 1 },
         function (err, profile) {
             if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error sending vote confirmation email'
+                );
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -1812,6 +1934,11 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
 
             mailTransporter.sendMail(message, (err) => {
                 if (err) {
+                    logGeneralError(
+                        req,
+                        err,
+                        'Error sending vote confirmation email'
+                    );
                     return res.status(500).json({
                         message: err.message,
                     });

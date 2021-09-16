@@ -12,6 +12,7 @@ const mailTransporter = require(global.appRoot + '/config/nodemailer');
 const profileController = require('./profileController');
 
 const logger = require('../../config/winston');
+const { logGeneralError } = require('../../config/logging-tools')(logger);
 
 /*
     POST /auth/account-lookup. Find if email is already registered or in census.
@@ -21,6 +22,7 @@ exports.accountLookup = function (req, res) {
         $or: [{ email: req.body.email }, { emailPersonal: req.body.email }],
     }).exec(function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Error');
             return res.status(500).json({
                 message: err.message,
             });
@@ -64,6 +66,7 @@ exports.login = function (req, res, cbFunc) {
         ],
     }).exec(function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Login error');
             return res.status(500).json({
                 message: err.message,
             });
@@ -97,6 +100,7 @@ exports.logout = function (req, res) {
         { accessToken: res.locals.oauth.token.accessToken },
         function (err) {
             if (err) {
+                logGeneralError(req, err, 'Logout error');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -111,6 +115,7 @@ exports.logout = function (req, res) {
 exports.register = function (req, res) {
     Profile.findOne({ email: req.body.email }, function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Register error');
             return res.status(500).json({
                 message: err.message,
             });
@@ -197,6 +202,7 @@ exports.registerNew = function (req, res) {
                 await profile.setPassword(req.body.password);
                 await profile.save();
             } catch (err) {
+                logGeneralError(req, err, 'Register error');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -220,6 +226,7 @@ exports.setPassword = function (req, res) {
     }
     Profile.findOne({ email: req.body.email }, async function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Error setting new password');
             return res.status(500).json({
                 message: err.message,
             });
@@ -245,6 +252,7 @@ exports.setPassword = function (req, res) {
                 await profile.setPassword(req.body.password);
                 await profile.save();
             } catch (err) {
+                logGeneralError(req, err, 'Error setting new password');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -267,6 +275,7 @@ exports.resendVerificationEmail = function (req, res) {
     }
     Profile.findOne({ email: req.body.email }, async function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Error sending verification email');
             return res.status(500).json({
                 message: err.message,
             });
@@ -326,6 +335,7 @@ exports.verifyEmail = function (req, res) {
                 message: 'This account is now verified. Please log in.',
             });
         } catch (err) {
+            logGeneralError(req, err, 'Error verifying account by email');
             return res.status(500).json({
                 message: err.message,
             });
@@ -342,6 +352,7 @@ exports.forgotPassword = function (req, res) {
         $or: [{ email: req.body.email }, { emailPersonal: req.body.email }],
     }).exec(function (err, profile) {
         if (err) {
+            logGeneralError(req, err, 'Forgot password error');
             return res.status(500).json({
                 message: err.message,
             });
@@ -356,6 +367,7 @@ exports.forgotPassword = function (req, res) {
 
         token.save(function (err) {
             if (err) {
+                logGeneralError(req, err, 'Error saving forgot password token');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -384,6 +396,11 @@ exports.forgotPassword = function (req, res) {
 
             mailTransporter.sendMail(message, (err) => {
                 if (err) {
+                    logGeneralError(
+                        req,
+                        err,
+                        'Error sending forgot password email'
+                    );
                     return res.status(500).json({
                         message: err.message,
                     });
@@ -429,6 +446,7 @@ exports.allowResetPassword = function (req, res) {
                 .status(301)
                 .redirect(`/reset-password/${req.params.token}`);
         } catch (err) {
+            logGeneralError(req, err, 'Error in password reset redirect');
             return res.status(500).json({
                 message: err.message,
             });
@@ -476,7 +494,7 @@ exports.resetPassword = function (req, res) {
                 message: 'Password reset successful.',
             });
         } catch (err) {
-            logger.error(err);
+            logGeneralError(req, err, 'Error resetting password');
             return res.status(500).json({
                 message: err.message,
             });
@@ -489,6 +507,7 @@ async function sendVerificationEmail(profile, req, res) {
 
     token.save(function (err) {
         if (err) {
+            logGeneralError(req, err, 'Error sending verification email');
             return res.status(500).json({
                 message: err.message,
             });
@@ -520,6 +539,7 @@ async function sendVerificationEmail(profile, req, res) {
 
         mailTransporter.sendMail(message, (err) => {
             if (err) {
+                logGeneralError(req, err, 'Error sending verification email');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -544,7 +564,7 @@ exports.createAccessToken = function (req, res) {
         { password: 0 },
         function (err, profile) {
             if (err) {
-                logger.error(`Error in createAccessToken: ${err}`);
+                logGeneralError(req, err, 'Error creating access token');
                 return res.status(500).json({
                     message: err.message,
                 });
@@ -560,7 +580,7 @@ exports.createAccessToken = function (req, res) {
             accessToken.client = 'api';
             accessToken.save(function (err) {
                 if (err) {
-                    logger.error(`Error in createAccessToken: ${err}`);
+                    logGeneralError(req, err, 'Error creating access token');
                     return res.status(500).json({
                         message: err.message,
                     });

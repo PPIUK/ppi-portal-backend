@@ -4,6 +4,9 @@ const Profile = mongoose.model('Profile');
 const ac = require(global.appRoot + '/config/roles');
 const mailTransporter = require(global.appRoot + '/config/nodemailer');
 
+const logger = require('../config/winston');
+const { logGeneralError } = require('../config/logging-tools')(logger);
+
 exports.pending = function (req, res) {
     let query = Profile.find();
 

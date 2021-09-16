@@ -27,19 +27,22 @@ const ac = require(global.appRoot + '/config/roles');
  * @return res.body.data an array of submissions
  */
 exports.index = function (req, res) {
-    IsicSciEssayForm.find({}, {__v: 0, createdAt: 0, updatedAt: 0}, function (err, forms) {
-        if (err) {
-            return res.status(500).json({
-                message: err.message,
+    IsicSciEssayForm.find(
+        {},
+        { __v: 0, createdAt: 0, updatedAt: 0 },
+        function (err, forms) {
+            if (err) {
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+
+            return res.status(200).json({
+                message: 'Forms returned successfully!',
+                data: forms,
             });
         }
-
-        return res.status(200).json({
-            message: 'Forms returned successfully!',
-            data: forms
-        })
-
-    });
+    );
 };
 
 /**
@@ -52,21 +55,32 @@ exports.index = function (req, res) {
  */
 exports.allAbstracts = function (req, res) {
     const file = new AdmZip();
-    file.addLocalFolder(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts'));
-    file.writeZip(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip'));
+    file.addLocalFolder(
+        global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts')
+    );
+    file.writeZip(
+        global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip')
+    );
 
-    if (fs.existsSync(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip'))) {
+    if (
+        fs.existsSync(
+            global.appRoot +
+                path.join('/uploads', '/isic-sci', '/abstracts.zip')
+        )
+    ) {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream',
             'Content-Disposition': `attachment; filename=abstracts.zip`,
             'Content-Transfer-Encoding': 'binary',
         });
         return res.end(
-            fs.readFileSync(global.appRoot + path.join('/uploads', '/isic-sci', '/abstracts.zip')
+            fs.readFileSync(
+                global.appRoot +
+                    path.join('/uploads', '/isic-sci', '/abstracts.zip')
             )
         );
     } else return res.status(404);
-}
+};
 
 /**
  * Retrieves the abstract file of a submission
@@ -77,8 +91,9 @@ exports.allAbstracts = function (req, res) {
  * @return res.body.data
  */
 exports.viewAbstract = function (req, res) {
-    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/abstracts')
-                  .filter(fn => fn.includes(req.params.id))
+    let files = fs
+        .readdirSync(global.appRoot + '/uploads/isic-sci/abstracts')
+        .filter((fn) => fn.includes(req.params.id));
     if (files.length === 1) {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream',
@@ -88,11 +103,11 @@ exports.viewAbstract = function (req, res) {
         return res.end(
             fs.readFileSync(
                 global.appRoot +
-                path.join('/uploads', '/isic-sci', '/abstracts', files[0])
+                    path.join('/uploads', '/isic-sci', '/abstracts', files[0])
             )
         );
     } else return res.status(404);
-}
+};
 
 /**
  * Uploads ISIC SCI Essay abstract
@@ -112,30 +127,48 @@ exports.uploadAbstract = [
                 return res.status(500).json({ message: err.message });
             }
             if (!form) {
-                return res.status(404).json({ message: 'Submission ID not found!' });
+                return res
+                    .status(404)
+                    .json({ message: 'Submission ID not found!' });
             }
 
             if (req.files.files.length > 0) {
                 let file = req.files.files[0];
-                if (file.errors.length > 0) return res.status(400).json({ message: file.errors[0].message });
+                if (file.errors.length > 0)
+                    return res
+                        .status(400)
+                        .json({ message: file.errors[0].message });
                 try {
                     const filename = sanitize(
-                        ['/', form.topic, '_', form.title.split(' ').join('_'), '_', req.params.id, path.extname(file.path)]
-                            .join(''))
+                        [
+                            '/',
+                            form.topic,
+                            '_',
+                            form.title.split(' ').join('_'),
+                            '_',
+                            req.params.id,
+                            path.extname(file.path),
+                        ].join('')
+                    );
                     fs.renameSync(
                         file.path,
                         global.appRoot +
-                        path.join('/uploads', '/isic-sci', '/abstracts', filename)
+                            path.join(
+                                '/uploads',
+                                '/isic-sci',
+                                '/abstracts',
+                                filename
+                            )
                     );
                     return res.sendStatus(200);
                 } catch (error) {
-                    console.log(error)
+                    console.log(error);
                     return res.status(500).json({ message: error.message });
                 }
             }
-        })
-    }
-]
+        });
+    },
+];
 
 /**
  * Retrieves a zip file of all ID files
@@ -147,21 +180,30 @@ exports.uploadAbstract = [
  */
 exports.allIds = function (req, res) {
     const file = new AdmZip();
-    file.addLocalFolder(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs'));
-    file.writeZip(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip'));
+    file.addLocalFolder(
+        global.appRoot + path.join('/uploads', '/isic-sci', '/IDs')
+    );
+    file.writeZip(
+        global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip')
+    );
 
-    if (fs.existsSync(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip'))) {
+    if (
+        fs.existsSync(
+            global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip')
+        )
+    ) {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream',
             'Content-Disposition': `attachment; filename=IDs.zip`,
             'Content-Transfer-Encoding': 'binary',
         });
         return res.end(
-            fs.readFileSync(global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip')
+            fs.readFileSync(
+                global.appRoot + path.join('/uploads', '/isic-sci', '/IDs.zip')
             )
         );
     } else return res.status(404);
-}
+};
 
 /**
  * Retrieves the student ID file of a submission
@@ -172,8 +214,11 @@ exports.allIds = function (req, res) {
  * @return res.body.data
  */
 exports.viewStudentId = function (req, res) {
-    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
-        .filter(fn => fn.includes(req.params.id + '_StudentID_' + req.params.no));
+    let files = fs
+        .readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
+        .filter((fn) =>
+            fn.includes(req.params.id + '_StudentID_' + req.params.no)
+        );
     if (files.length === 1) {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream',
@@ -183,11 +228,11 @@ exports.viewStudentId = function (req, res) {
         return res.end(
             fs.readFileSync(
                 global.appRoot +
-                path.join('/uploads', '/isic-sci', '/IDs', files[0])
+                    path.join('/uploads', '/isic-sci', '/IDs', files[0])
             )
         );
     } else return res.status(404);
-}
+};
 
 /**
  * Uploads ISIC SCI Essay participant Student ID
@@ -205,22 +250,31 @@ exports.uploadStudentID = [
     function (req, res) {
         if (req.files.files.length > 0) {
             let file = req.files.files[0];
-            if (file.errors.length > 0) return res.status(400).json({ message: file.errors[0].message });
+            if (file.errors.length > 0)
+                return res
+                    .status(400)
+                    .json({ message: file.errors[0].message });
             try {
-                const filename = ['/', req.params.id, '_StudentID_', req.params.no, path.extname(file.path)].join('')
+                const filename = [
+                    '/',
+                    req.params.id,
+                    '_StudentID_',
+                    req.params.no,
+                    path.extname(file.path),
+                ].join('');
                 fs.renameSync(
                     file.path,
                     global.appRoot +
-                    path.join('/uploads', '/isic-sci', '/IDs', filename)
+                        path.join('/uploads', '/isic-sci', '/IDs', filename)
                 );
                 return res.sendStatus(200);
             } catch (error) {
-                console.log(error)
+                console.log(error);
                 return res.status(500).json({ message: error.message });
             }
         }
-    }
-]
+    },
+];
 
 /**
  * Retrieves the KTP/Passport file of a submission
@@ -231,8 +285,11 @@ exports.uploadStudentID = [
  * @return res.body.data
  */
 exports.viewKtp = function (req, res) {
-    let files = fs.readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
-        .filter(fn => fn.includes(req.params.id + '_KTP_Passport_' + req.params.no));
+    let files = fs
+        .readdirSync(global.appRoot + '/uploads/isic-sci/IDs')
+        .filter((fn) =>
+            fn.includes(req.params.id + '_KTP_Passport_' + req.params.no)
+        );
     if (files.length === 1) {
         res.writeHead(200, {
             'Content-Type': 'application/octet-stream',
@@ -242,11 +299,11 @@ exports.viewKtp = function (req, res) {
         return res.end(
             fs.readFileSync(
                 global.appRoot +
-                path.join('/uploads', '/isic-sci', '/IDs', files[0])
+                    path.join('/uploads', '/isic-sci', '/IDs', files[0])
             )
         );
     } else return res.status(404);
-}
+};
 
 /**
  * Uploads ISIC SCI Essay participant KTP/Passport
@@ -264,22 +321,31 @@ exports.uploadKTP = [
     function (req, res) {
         if (req.files.files.length > 0) {
             let file = req.files.files[0];
-            if (file.errors.length > 0) return res.status(400).json({ message: file.errors[0].message });
+            if (file.errors.length > 0)
+                return res
+                    .status(400)
+                    .json({ message: file.errors[0].message });
             try {
-                const filename = ['/', req.params.id, '_KTP_Passport_', req.params.no, path.extname(file.path)].join('')
+                const filename = [
+                    '/',
+                    req.params.id,
+                    '_KTP_Passport_',
+                    req.params.no,
+                    path.extname(file.path),
+                ].join('');
                 fs.renameSync(
                     file.path,
                     global.appRoot +
-                    path.join('/uploads', '/isic-sci', '/IDs', filename)
+                        path.join('/uploads', '/isic-sci', '/IDs', filename)
                 );
                 return res.sendStatus(200);
             } catch (error) {
-                console.log(error)
+                console.log(error);
                 return res.status(500).json({ message: error.message });
             }
         }
-    }
-]
+    },
+];
 
 /**
  * Submits ISIC SCI Essay form
@@ -290,34 +356,33 @@ exports.uploadKTP = [
  * @return res.statusCode 500 if error
  * @return res.body.message
  */
-exports.new =
-    function (req, res) {
-        IsicSciEssayForm.findOne(
-            { emailAddressMain: req.body.emailAddressMain },
-            async (err, form) => {
-                if (err) {
-                    return res.status(500).json({ message: err.message });
-                }
+exports.new = function (req, res) {
+    IsicSciEssayForm.findOne(
+        { emailAddressMain: req.body.emailAddressMain },
+        async (err, form) => {
+            if (err) {
+                return res.status(500).json({ message: err.message });
+            }
 
-                if (form && form.abstractSubmitted) {
-                    return res.status(400).json({
-                        message: 'This email address has already submitted the form before!',
-                    });
-                }
+            if (form && form.abstractSubmitted) {
+                return res.status(400).json({
+                    message:
+                        'This email address has already submitted the form before!',
+                });
+            }
 
-                if (!form) {
-                    form = new IsicSciEssayForm(req.body);
-                }
-                form.abstractSubmitted = req.body.abstractSubmitted;
+            if (!form) {
+                form = new IsicSciEssayForm(req.body);
+            }
+            form.abstractSubmitted = req.body.abstractSubmitted;
 
-                if (req.body.abstractSubmitted) {
-                    mailTransporter.sendMail({
-                        from:
-                            'PPI UK Portal Mailer <ppiunitedkingdom@gmail.com>',
-                        replyTo: 'no-reply@example.com',
-                        to: req.body.emailAddressMain,
-                        subject: 'ISIC x SCI 2021 Essay Competition',
-                        text: dedent`Thank you for participating in ISIC x SCI 2021 Essay Competition. 
+            if (req.body.abstractSubmitted) {
+                mailTransporter.sendMail({
+                    from: 'PPI UK Portal Mailer <ppiunitedkingdom@gmail.com>',
+                    replyTo: 'no-reply@example.com',
+                    to: req.body.emailAddressMain,
+                    subject: 'ISIC x SCI 2021 Essay Competition',
+                    text: dedent`Thank you for participating in ISIC x SCI 2021 Essay Competition. 
                     We have received the abstract that you submitted, with ${form.name1} as the main author.
                         
                     This is your submission ID: ${form.id}. 
@@ -326,17 +391,19 @@ exports.new =
                     Best regards,
 
                     ISIC x SCI 2021 Essay Competition Committee`,
-                    });
-                }
-
-                form.save()
-                    .then(() => res.status(200).json({ submissionId: form.id, message: 'Form saved' }))
-                    .catch((err) =>
-                        res.status(500).json({ message: err.message })
-                    );
+                });
             }
-        );
-    };
+
+            form.save()
+                .then(() =>
+                    res
+                        .status(200)
+                        .json({ submissionId: form.id, message: 'Form saved' })
+                )
+                .catch((err) => res.status(500).json({ message: err.message }));
+        }
+    );
+};
 
 /**
  * Find permission for the requested action and role

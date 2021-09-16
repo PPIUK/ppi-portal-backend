@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const Profile = mongoose.model('Profile');
 
+const logger = require('../config/winston');
+
 exports.memberSummaryBranch = function (req, res) {
     Profile.aggregate([
         {
@@ -15,10 +17,18 @@ exports.memberSummaryBranch = function (req, res) {
             },
         },
     ]).exec((err, docs) => {
-        if (err)
+        if (err) {
+            logger.error(
+                `${
+                    req.path
+                } : Error retrieving public member summary by branch: ${JSON.stringify(
+                    err
+                )}`
+            );
             res.status(500).json({
                 message: err.message,
             });
+        }
 
         res.status(200).json({
             message: 'Member summary (branch) returned',
@@ -31,7 +41,16 @@ exports.memberSummaryActive = function (req, res) {
     Profile.find()
         .where('endDate')
         .gte(new Date())
-        .then((profiles) => res.json({ count: profiles.length }));
+        .then((profiles) => res.json({ count: profiles.length }))
+        .catch((err) => {
+            logger.error(
+                `${
+                    req.path
+                } : Error retrieving public member summary by active: ${JSON.stringify(
+                    err
+                )}`
+            );
+        });
 };
 
 exports.memberSummaryUni = function (req, res) {
@@ -47,10 +66,18 @@ exports.memberSummaryUni = function (req, res) {
             },
         },
     ]).exec((err, docs) => {
-        if (err)
+        if (err) {
+            logger.error(
+                `${
+                    req.path
+                } : Error retrieving public member summary by uni: ${JSON.stringify(
+                    err
+                )}`
+            );
             res.status(500).json({
                 message: err.message,
             });
+        }
 
         res.status(200).json({
             message: 'Member summary (uni) returned',
