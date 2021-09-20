@@ -343,6 +343,7 @@ exports.statistics = async function (req, res) {
             for (let round of campaign.voting) {
                 let roundStatistics = {};
                 const candidates = round.candidates;
+                const voters = Array.from(round.votes.keys());
                 const votes = Array.from(round.votes.values());
                 const overallCount = votes.reduce((total, value) => {
                     total[value] = (total[value] || 0) + 1;
@@ -378,11 +379,13 @@ exports.statistics = async function (req, res) {
                     },
                     { _id: 1, branch: 1 }
                 );
-                profiles = profiles.map((profile, i) => {
+                profiles = profiles.map((profile) => {
                     return {
                         id: String(profile._id),
                         branch: profile.branch,
-                        candidateID: String(votes[i]),
+                        candidateID: String(
+                            votes[voters.indexOf(String(profile._id))]
+                        ),
                     };
                 });
 
