@@ -18,6 +18,7 @@ const { logGeneralError } = require('../../config/logging-tools')(logger);
     POST /auth/account-lookup. Find if email is already registered or in census.
  */
 exports.accountLookup = function (req, res) {
+    req.body.email = req.body.email.toLowerCase();
     Profile.findOne({
         $or: [{ email: req.body.email }, { emailPersonal: req.body.email }],
     }).exec(function (err, profile) {
@@ -59,6 +60,7 @@ exports.accountLookup = function (req, res) {
     This should return an access token.
  */
 exports.login = function (req, res, cbFunc) {
+    req.body.username = req.body.username.toLowerCase();
     Profile.findOne({
         $or: [
             { email: req.body.username },
@@ -113,6 +115,7 @@ exports.logout = function (req, res) {
 };
 
 exports.register = function (req, res) {
+    req.body.email = req.body.email.toLowerCase();
     Profile.findOne({ email: req.body.email }, function (err, profile) {
         if (err) {
             logGeneralError(req, err, 'Register error');
@@ -150,6 +153,13 @@ exports.registerNew = function (req, res) {
                 message: err.field,
             });
         }
+        if (req.body.email) {
+            req.body.email = req.body.email.toLowerCase();
+        }
+        if (req.body.emailPersonal) {
+            req.body.emailPersonal = req.body.emailPersonal.toLowerCase();
+        }
+
         const emailQuery = req.body.email
             ? { email: req.body.email }
             : { emailPersonal: req.body.emailPersonal };
@@ -265,34 +275,37 @@ exports.setPassword = function (req, res) {
 
 /*
     POST /auth/resend-verification. Resends verification email with the token.
-    Email must be a valid UK university email address (ends with 'ac.uk' or '.edu').
  */
 exports.resendVerificationEmail = function (req, res) {
-    if (!req.body.email.endsWith('ac.uk') || !req.body.email.endsWith('.edu')) {
-        return res.status(400).json({
-            message: 'Email is not a valid UK university email address.',
-        });
-    }
-    Profile.findOne({ email: req.body.email }, async function (err, profile) {
-        if (err) {
-            logGeneralError(req, err, 'Error sending verification email');
-            return res.status(500).json({
-                message: err.message,
-            });
+    req.body.username = req.body.username.toLowerCase();
+    Profile.findOne(
+        {
+            $or: [
+                { email: req.body.username },
+                { emailPersonal: req.body.username },
+            ],
+        },
+        async function (err, profile) {
+            if (err) {
+                logGeneralError(req, err, 'Error sending verification email');
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!profile) {
+                return res.status(404).json({
+                    message: 'Profile not found',
+                });
+            }
+            if (profile.emailVerified) {
+                return res.status(400).json({
+                    message:
+                        'Account had already been verified by email. Please login using your email and password',
+                });
+            }
+            await sendVerificationEmail(profile, req, res);
         }
-        if (!profile) {
-            return res.status(404).json({
-                message: 'Profile not found',
-            });
-        }
-        if (profile.emailVerified) {
-            return res.status(400).json({
-                message:
-                    'Account had already been verified by email. Please login using your email and password',
-            });
-        }
-        await sendVerificationEmail(profile, req, res);
-    });
+    );
 };
 
 /*
@@ -348,6 +361,7 @@ exports.verifyEmail = function (req, res) {
     Sends a token to email for password reset.
  */
 exports.forgotPassword = function (req, res) {
+    req.body.email = req.body.email.toLowerCase();
     Profile.findOne({
         $or: [{ email: req.body.email }, { emailPersonal: req.body.email }],
     }).exec(function (err, profile) {
