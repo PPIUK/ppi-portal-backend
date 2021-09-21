@@ -172,6 +172,7 @@ exports.activeNominate = function (req, res) {
 /**
  * Gets active campaigns which are in voting phase.
  * Voting results are excluded from the response.
+ * FIXME: faulty
  * @name GET_/api/voting/active/vote
  * @return res.body.data is list of active campaigns
  */
@@ -187,7 +188,7 @@ exports.activeVote = function (req, res) {
                 $lte: [{ $arrayElemAt: ['$voting.startDate', -1] }, now],
             },
         },
-        { 'candidates.votes': 0 }
+        { 'voting.votes': 0 }
     )
         .then((campaigns) => {
             return res.status(200).json({
@@ -206,6 +207,52 @@ exports.activeVote = function (req, res) {
                 message: err.message,
             });
         });
+};
+
+/**
+ * Checks if the election campaign is in voting phase or not
+ * @name GET_/api/voting/:campaignID/isActiveVote
+ * @return res.body.data is true or false, whether election is in voting phase or not
+ */
+exports.isActiveVote = function (req, res) {
+    let now = new Date();
+    VotingCampaign.findById(
+        req.params.campaignID,
+        { 'voting.startDate': 1, 'voting.endDate': 1 },
+        function (err, campaign) {
+            if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    `Error checking if election is active in vote phase`
+                );
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
+            }
+
+            let isActive;
+            for (let round of campaign.voting) {
+                if (now >= round.startDate && now < round.endDate) {
+                    isActive = true;
+                    break;
+                }
+            }
+            if (isActive !== true) {
+                isActive = false;
+            }
+
+            return res.status(200).json({
+                message: 'Campaign is active voting status returned.',
+                data: isActive,
+            });
+        }
+    );
 };
 
 exports.votersStatistics = async function (req, res) {

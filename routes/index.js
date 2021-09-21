@@ -406,6 +406,9 @@ module.exports = (app) => {
     router
         .route('/voting/:campaignID/hasVoted/:round')
         .get(app.oauth.authenticate(), votingCampaignController.hasVoted);
+    router
+        .route('/voting/:campaignID/isActiveVote')
+        .get(app.oauth.authenticate(), votingCampaignController.isActiveVote);
     // Export API routes
     return router;
 };
