@@ -401,7 +401,7 @@ module.exports = (app) => {
         .route('/voting/:campaignID/round/:roundID')
         .get(app.oauth.authenticate(), votingCampaignController.viewRound);
     router
-        .route('/voting/:campaignID/eligibility')
+        .route('/voting/:campaignID/eligibility/:round')
         .get(app.oauth.authenticate(), votingCampaignController.eligibility);
     router
         .route('/voting/:campaignID/hasVoted/:round')

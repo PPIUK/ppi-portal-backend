@@ -273,9 +273,9 @@ exports.votersStatistics = async function (req, res) {
             }
 
             let statistics = [];
-            for (let round of campaign.voting) {
+            for (let [i, round] of campaign.voting.entries()) {
                 let roundStatistics = {};
-                let aggregationPipeline = getEligibleListPipeline(campaign);
+                let aggregationPipeline = getEligibleListPipeline(campaign, i);
 
                 const eligibleVoters = await Profile.aggregate(
                     aggregationPipeline
@@ -1537,13 +1537,15 @@ exports.selectCandidates = function (req, res) {
 
 /**
  * Checks if caller is eligible to vote in the specified campaign.
- * @name POST_/api/voting/:campaignID/eligibility
+ * @name POST_/api/voting/:campaignID/eligibility/:round
  * @param req.params.campaignID is the campaign ID
+ * @param req.params.round is the round number
  * @return res.body.data is true or false
  */
 exports.eligibility = async function (req, res) {
     let voterId = String(res.locals.oauth.token.user._id);
     let profile = await Profile.findById(voterId, {
+        email: 1,
         roles: 1,
         startDate: 1,
         endDate: 1,
@@ -1566,7 +1568,11 @@ exports.eligibility = async function (req, res) {
             message: 'Campaign is not found',
         });
     }
-
+    if (parseInt(req.params.round) === 1 && !profile.email) {
+        return res.status(200).json({
+            data: false,
+        });
+    }
     if (profile.endDate < campaign.voterCutOffEndDate) {
         return res.status(200).json({
             data: false,
@@ -1576,8 +1582,8 @@ exports.eligibility = async function (req, res) {
         (profile.endDate - profile.startDate) / (1000 * 60 * 60 * 24) <
         180 //FIXME: magic number
     ) {
-        return res.status(403).json({
-            message: 'You are not eligible to vote due to your course length.',
+        return res.status(200).json({
+            data: false,
         });
     }
 
@@ -1598,7 +1604,7 @@ exports.eligibility = async function (req, res) {
     });
 };
 
-function getEligibleListPipeline(campaign) {
+function getEligibleListPipeline(campaign, round) {
     let aggregationPipeline = [
         {
             $match: {
@@ -1608,6 +1614,15 @@ function getEligibleListPipeline(campaign) {
             },
         },
     ];
+    if (round === 1) {
+        aggregationPipeline.push({
+            $match: {
+                email: {
+                    $exists: true,
+                },
+            },
+        });
+    }
     aggregationPipeline.push({
         $project: {
             _id: 1,
@@ -1706,11 +1721,21 @@ function getEligibleListPipeline(campaign) {
     return aggregationPipeline;
 }
 
+/**
+ * Get eligible voters list for every round of the election.
+ * @name GET_/voting/admin/:campaignID/voters
+ * @param req.params.campaignID is the campaign ID
+ * @return res.body.data is the list of list of eligible voters, for each round
+ */
 exports.eligibleList = function (req, res) {
     VotingCampaign.findById(
         req.params.campaignID,
-        { voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
-        function (err, campaign) {
+        {
+            voterCutOffEndDate: 1,
+            voterMastersCutOffStartDate: 1,
+            'voting.startDate': 1,
+        },
+        async function (err, campaign) {
             if (err) {
                 logGeneralError(
                     req,
@@ -1726,7 +1751,7 @@ exports.eligibleList = function (req, res) {
                     message: 'Campaign is not found',
                 });
             }
-            let aggregationPipeline = getEligibleListPipeline(campaign);
+            let aggregationPipeline = getEligibleListPipeline(campaign, 0);
             aggregationPipeline.push({
                 $project: {
                     _id: 1,
@@ -1737,17 +1762,29 @@ exports.eligibleList = function (req, res) {
                     endDate: 1,
                 },
             });
-            Profile.aggregate(aggregationPipeline, function (err, profiles) {
-                if (err) {
-                    return res.status(500).json({
-                        message: err.message,
-                    });
+            try {
+                const round1Profiles = await Profile.aggregate(
+                    aggregationPipeline
+                );
+                let profiles = [round1Profiles];
+                if (campaign.voting.length > 1) {
+                    aggregationPipeline = getEligibleListPipeline(campaign, 1);
+                    profiles.push(await Profile.aggregate(aggregationPipeline));
                 }
                 return res.status(200).json({
                     message: 'Voter list received successfully',
                     data: profiles,
                 });
-            });
+            } catch (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    'Error retrieving eligible voter list'
+                );
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
         }
     );
 };
@@ -1805,6 +1842,7 @@ exports.vote = async function (req, res) {
     try {
         let voterId = String(res.locals.oauth.token.user._id);
         let profile = await Profile.findById(voterId, {
+            email: 1,
             roles: 1,
             startDate: 1,
             endDate: 1,
@@ -1829,7 +1867,7 @@ exports.vote = async function (req, res) {
                 message: 'Campaign is not found',
             });
         }
-        const round = req.params.round;
+        const round = parseInt(req.params.round);
         if (campaign.voting.length <= round) {
             return res.status(400).json({
                 message: `There is no voting round ${
@@ -1846,6 +1884,12 @@ exports.vote = async function (req, res) {
         if (current > new Date(campaign.voting[round].endDate)) {
             return res.status(403).json({
                 message: 'The voting phase has ended.',
+            });
+        }
+        if (round === 1 && profile.email === undefined) {
+            return res.status(403).json({
+                message:
+                    'You are not eligible to vote because you do not have a university email.',
             });
         }
         if (profile.endDate < campaign.voterCutOffEndDate) {
