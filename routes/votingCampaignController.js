@@ -1617,9 +1617,14 @@ function getEligibleListPipeline(campaign, round) {
     if (round === 1) {
         aggregationPipeline.push({
             $match: {
-                email: {
-                    $exists: true,
-                },
+                $and: [
+                    {
+                        email: {
+                            $exists: true,
+                        },
+                    },
+                    { email: { $ne: '' } },
+                ],
             },
         });
     }
