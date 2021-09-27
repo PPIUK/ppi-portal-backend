@@ -160,9 +160,10 @@ exports.registerNew = function (req, res) {
             req.body.emailPersonal = req.body.emailPersonal.toLowerCase();
         }
 
-        const emailQuery = req.body.email
-            ? { email: req.body.email }
-            : { emailPersonal: req.body.emailPersonal };
+        // const emailQuery = req.body.email
+        //     ? { email: req.body.email }
+        //     : { emailPersonal: req.body.emailPersonal };
+        const emailQuery = { email: req.body.email };
         Profile.findOne(emailQuery, async function (err, _profile) {
             if (err) {
                 return res.status(400).json({
