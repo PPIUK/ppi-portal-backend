@@ -57,6 +57,10 @@ const votingRoundSchema = new mongoose.Schema({
         // of: String,
         default: {},
     },
+    voterListFinalisationDate: {
+        type: Date,
+        required: false,
+    },
 });
 
 votingRoundSchema.pre('validate', function (next) {

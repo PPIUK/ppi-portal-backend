@@ -756,6 +756,8 @@ exports.updateRound = function (req, res) {
         if (req.params.roundID >= campaign.voting.length) res.sendStatus(400);
         campaign.voting[req.params.roundID].startDate = req.body.startDate;
         campaign.voting[req.params.roundID].endDate = req.body.endDate;
+        campaign.voting[req.params.roundID].voterListFinalisationDate =
+            req.body.voterListFinalisationDate;
 
         campaign
             .save()
@@ -1545,6 +1547,7 @@ exports.selectCandidates = function (req, res) {
 exports.eligibility = async function (req, res) {
     let voterId = String(res.locals.oauth.token.user._id);
     let profile = await Profile.findById(voterId, {
+        _id: 1,
         email: 1,
         roles: 1,
         startDate: 1,
@@ -1569,6 +1572,14 @@ exports.eligibility = async function (req, res) {
         });
     }
     if (parseInt(req.params.round) === 1 && !profile.email) {
+        return res.status(200).json({
+            data: false,
+        });
+    }
+    if (
+        profile._id.getTimestamp() >
+        campaign.voting[req.params.round].voterListFinalisationDate
+    ) {
         return res.status(200).json({
             data: false,
         });
@@ -1653,6 +1664,21 @@ function getEligibleListPipeline(campaign, round) {
             },
         },
     });
+    if (campaign.voting[round].voterListFinalisationDate) {
+        aggregationPipeline.push({
+            $match: {
+                _id: {
+                    $lte: mongoose.Types.ObjectId(
+                        Math.ceil(
+                            campaign.voting[
+                                round
+                            ].voterListFinalisationDate.getTime() / 1000
+                        ).toString(16) + '0000000000000000'
+                    ),
+                },
+            },
+        });
+    }
     if (campaign.voterCutOffEndDate) {
         aggregationPipeline.push({
             $match: {
@@ -1739,6 +1765,7 @@ exports.eligibleList = function (req, res) {
             voterCutOffEndDate: 1,
             voterMastersCutOffStartDate: 1,
             'voting.startDate': 1,
+            'voting.voterListFinalisationDate': 1,
         },
         async function (err, campaign) {
             if (err) {
@@ -1895,6 +1922,15 @@ exports.vote = async function (req, res) {
             return res.status(403).json({
                 message:
                     'You are not eligible to vote because you do not have a university email.',
+            });
+        }
+        if (
+            profile._id.getTimestamp() >
+            campaign.voting[round].voterListFinalisationDate
+        ) {
+            return res.status(403).json({
+                message:
+                    'You are not eligible to vote due to your late registration.',
             });
         }
         if (profile.endDate < campaign.voterCutOffEndDate) {
