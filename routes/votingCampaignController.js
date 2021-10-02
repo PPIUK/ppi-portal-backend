@@ -2043,7 +2043,7 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
                 html: `<p>Thank you for taking your crucial role in shaping the PPI UK 2021/2022 through your vote in 
                 the first round of election. Please keep this email and this code: ${hashValue} as your receipt. </p>
                 <p><b>Inform your colleagues who are eligible as voters to vote in this round!
-                The vote portal will be available from 13 September 2021 at 00.00 BST to 14 September 2021 at 12.00 BST.</b></p>
+                The vote portal will be available from 3 October 2021 at 00.00 BST to 7 October 2021 at 12.00 BST.</b></p>
                 <p>Post sticker yang terlampir dan mention @kpuppi_unitedkingdom pada Instagram story di akun Instagram yang Anda miliki.
                 Anda juga bisa memasukkan sticker KPU PPI UK yang relevan lainnya dengan memasukan kata kunci “@kpuppiuk” pada GIF di Instagram story Anda.</p>
                 <p>Updates about PPI UK General Election 2021:<br/>
@@ -2054,13 +2054,13 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
                 <p>Send your enquiries to <a href="mailto:kpuppiuk@gmail.com">kpuppiuk@gmail.com</a></p>`, // html body
                 attachments: [
                     {
-                        filename: 'vote-sticker.png',
+                        filename: 'vote-sticker-2.jfif',
                         content: fs.createReadStream(
                             path.join(
                                 __dirname,
                                 '..',
                                 'data',
-                                'vote-sticker.png'
+                                'vote-sticker-2.jfif'
                             )
                         ),
                     },
