@@ -617,6 +617,9 @@ exports.createAccessToken = function (req, res) {
                 }
             });
 
+            profile.lastLoggedIn = new Date();
+            profile.save();
+
             return res.status(200).json({
                 access_token: token,
                 token_type: 'Bearer',

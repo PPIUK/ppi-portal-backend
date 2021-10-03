@@ -157,6 +157,9 @@ var profileSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    lastLoggedIn: {
+        type: Date,
+    },
 });
 
 profileSchema.pre('findOneAndUpdate', function (next) {

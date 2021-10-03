@@ -129,7 +129,12 @@ module.exports = (app) => {
         .route('/auth/resend-verification')
         .post(authController.resendVerificationEmail);
     router.route('/auth/verify-email/:token').get(authController.verifyEmail);
-    router.route('/auth/login').post(authController.login, app.oauth.token());
+    router
+        .route('/auth/login')
+        .post(authController.login, app.oauth.token(), (req, res) => {
+            res.locals.oauth.token.user.lastLoggedIn = new Date();
+            res.locals.oauth.token.user.save();
+        });
     router
         .route('/auth/logout')
         .post(app.oauth.authenticate(), authController.logout);
