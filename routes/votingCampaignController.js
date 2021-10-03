@@ -2054,13 +2054,13 @@ async function sendVotingSuccessEmail(voterId, candidateId, req, res) {
                 <p>Send your enquiries to <a href="mailto:kpuppiuk@gmail.com">kpuppiuk@gmail.com</a></p>`, // html body
                 attachments: [
                     {
-                        filename: 'vote-sticker-2.jfif',
+                        filename: 'vote-sticker-2.jpg',
                         content: fs.createReadStream(
                             path.join(
                                 __dirname,
                                 '..',
                                 'data',
-                                'vote-sticker-2.jfif'
+                                'vote-sticker-2.jpg'
                             )
                         ),
                     },
