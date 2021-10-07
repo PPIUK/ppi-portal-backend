@@ -296,6 +296,9 @@ module.exports = (app) => {
         .route('/voting/pubstats/:id')
         .get(votingCampaignController.votersStatistics);
     router
+        .route('/voting/pubinfo/:id')
+        .get(votingCampaignController.publicInfo);
+    router
         .route('/voting/admin')
         .post(
             app.oauth.authenticate(),

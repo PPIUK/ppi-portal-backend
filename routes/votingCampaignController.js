@@ -255,10 +255,53 @@ exports.isActiveVote = function (req, res) {
     );
 };
 
+/**
+ * Gets election public info (whether it is active or not and the voting start and end dates)
+ * @name GET_/api/voting/pubinfo/:id
+ * @return res.body.data the election public info
+ */
+exports.publicInfo = function (req, res) {
+    VotingCampaign.findById(
+        req.params.id,
+        {
+            activeOverride: 1,
+            'voting.startDate': 1,
+            'voting.endDate': 1,
+            'voting.candidates': 1,
+        },
+        function (err, campaign) {
+            if (err) {
+                logGeneralError(
+                    req,
+                    err,
+                    `Error retrieving campaign public info.`
+                );
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+            if (!campaign) {
+                return res.status(404).json({
+                    message: 'Campaign not found',
+                });
+            }
+            return res.status(200).json({
+                message: 'Campaign public info is returned.',
+                data: campaign,
+            });
+        }
+    );
+};
+
 exports.votersStatistics = async function (req, res) {
     VotingCampaign.findById(
         req.params.id,
-        { voting: 1, voterCutOffEndDate: 1, voterMastersCutOffStartDate: 1 },
+        {
+            activeOverride: 1,
+            voting: 1,
+            voterCutOffEndDate: 1,
+            voterMastersCutOffStartDate: 1,
+        },
         async function (err, campaign) {
             if (err) {
                 logGeneralError(req, err, `Error retrieving voter statistics`);
@@ -275,6 +318,9 @@ exports.votersStatistics = async function (req, res) {
             let statistics = [];
             for (let [i, round] of campaign.voting.entries()) {
                 let roundStatistics = {};
+                if (campaign.activeOverride) {
+                    roundStatistics.overall = getOverallVotersCount(round);
+                }
                 let aggregationPipeline = getEligibleListPipeline(campaign, i);
 
                 const eligibleVoters = await Profile.aggregate(
@@ -392,30 +438,7 @@ exports.statistics = async function (req, res) {
                 const candidates = round.candidates;
                 const voters = Array.from(round.votes.keys());
                 const votes = Array.from(round.votes.values());
-                const overallCount = votes.reduce((total, value) => {
-                    total[value] = (total[value] || 0) + 1;
-                    return total;
-                }, {});
-
-                let overallCountArray = [];
-                for (let cand in overallCount) {
-                    overallCountArray[candidates.indexOf(cand)] = {
-                        candidateID: cand,
-                        votes: overallCount[cand],
-                    };
-                }
-                for (let i = 0; i < candidates.length; i++) {
-                    if (!overallCountArray[i]) {
-                        overallCountArray[i] = {
-                            candidateID: candidates[i],
-                            votes: 0,
-                        };
-                    }
-                }
-
-                if (overallCountArray.length > 0) {
-                    roundStatistics.overall = overallCountArray;
-                }
+                roundStatistics.overall = getOverallVotersCount(round);
 
                 const voterIds = Array.from(round.votes.keys()).map((id) =>
                     mongoose.Types.ObjectId(id)
@@ -487,6 +510,35 @@ exports.statistics = async function (req, res) {
         }
     );
 };
+
+function getOverallVotersCount(round) {
+    const candidates = round.candidates;
+    const votes = Array.from(round.votes.values());
+    const overallCount = votes.reduce((total, value) => {
+        total[value] = (total[value] || 0) + 1;
+        return total;
+    }, {});
+
+    let overallCountArray = [];
+    for (let cand in overallCount) {
+        overallCountArray[candidates.indexOf(cand)] = {
+            candidateID: cand,
+            votes: overallCount[cand],
+        };
+    }
+    for (let i = 0; i < candidates.length; i++) {
+        if (!overallCountArray[i]) {
+            overallCountArray[i] = {
+                candidateID: candidates[i],
+                votes: 0,
+            };
+        }
+    }
+
+    if (overallCountArray.length > 0) {
+        return overallCountArray;
+    }
+}
 
 function reshapeStatistics(data, outerKey, childrenKey, candidates) {
     const statsObj = {};
