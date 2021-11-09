@@ -470,6 +470,68 @@ function deleteFileFromBucket(bucket, attribute, res) {
 }
 
 /**
+ * Deletes own profile.
+ * @name DELETE_/api/profiles/me
+ * @return res.statusCode 200 if the profile is deleted successfully
+ * @return res.statusCode 404 if profile not found
+ * @return res.statusCode 403 if requester doesn't have enough privilege (not dataAccess user or trying to delete user outside of their branch)
+ * @return res.statusCode 500 if error
+ * @return res.body.message
+ */
+exports.deleteSelf = function (req, res) {
+    Profile.findById(res.locals.oauth.token.user, function (err, profile) {
+        if (profile === null || (err && err.name === 'CastError')) {
+            return res.status(404).json({
+                message: 'Id not found',
+            });
+        }
+        if (err) {
+            logGeneralError(req, err, 'Error deleting profile');
+            return res.status(500).json({
+                message: err.message,
+            });
+        }
+        if (
+            profile._id.toString() !==
+            res.locals.oauth.token.user._id.toString()
+        ) {
+            return res.status(403).json({
+                message: "You don't have enough privilege to do this action",
+            });
+        }
+
+        Profile.findByIdAndDelete(res.locals.oauth.token.user, function (err) {
+            if (err) {
+                logGeneralError(req, err, 'Error deleting profile');
+                return res.status(500).json({
+                    message: err.message,
+                });
+            }
+
+            logger.info(`Deleting user ${res.locals.oauth.token.user}`);
+
+            const bucket = new mongoose.mongo.GridFSBucket(
+                mongoose.connection.db,
+                {
+                    bucketName: 'profilefiles',
+                }
+            );
+
+            if (profile.studentProof) {
+                deleteFileFromBucket(bucket, profile.studentProof, res);
+            }
+            if (profile.profilePicture) {
+                deleteFileFromBucket(bucket, profile.profilePicture, res);
+            }
+
+            return res.status(200).json({
+                message: 'Profile deleted!',
+            });
+        });
+    });
+};
+
+/**
  * Gets own profile info. Can also be called by basic role.
  * @name GET_/api/profiles/me
  * @return res.status 200 if own profile retrieved successfully

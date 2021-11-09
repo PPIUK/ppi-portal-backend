@@ -51,6 +51,11 @@ module.exports = (app) => {
             app.oauth.authenticate(),
             profileController.grantAccess('updateOwn'),
             profileController.updateSelf
+        )
+        .delete(
+            app.oauth.authenticate(),
+            profileController.grantAccess('deleteOwn'),
+            profileController.deleteSelf
         );
     router
         .route('/profiles/me/studentproof')
