@@ -16,6 +16,7 @@ const publicInfo = [
     '_id',
     'fullName',
     'university',
+    'endDate',
     'degreeLevel',
     'faculty',
     'course',
