@@ -15,10 +15,10 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - name: Deploy to portal.ppiuk.org
+      - name: Deploy to portal.ppiuk.id
         uses: appleboy/ssh-action@v0.1.4
         with:
-          host: portal.ppiuk.org
+          host: portal.ppiuk.id
           key: ${{ secrets.DEPLOY_KEY }}
           username: ubuntu
           script: cd ~/repos/ppi-portal-backend;git fetch --all; git reset --hard origin/master; npm ci; pm2 reload all;

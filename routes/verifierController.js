@@ -97,9 +97,9 @@ async function sendVerifiedNotificationEmail(profile, req, res) {
         to: profile.email, // list of receivers
         cc: profile.emailPersonal,
         subject: 'Your account is now verified', // Subject line
-        html: `<p>Thank you for registering to <a href="https://portal.ppiuk.org/">Portal PPI UK</a>. 
+        html: `<p>Thank you for registering to <a href="https://portal.ppiuk.id/">Portal PPI UK</a>. 
                 Your account is now verified. Please login to 
-                <a href="https://portal.ppiuk.org/">portal.ppiuk.org/</a></p>`, // html body
+                <a href="https://portal.ppiuk.id/">portal.ppiuk.id/</a></p>`, // html body
     };
 
     mailTransporter.sendMail(message, (err) => {

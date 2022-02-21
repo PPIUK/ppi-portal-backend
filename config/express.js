@@ -30,10 +30,14 @@ module.exports = function (app, logger) {
 
     // app.options('*', cors());
     const corsOptions = {
-        origin: ['http://localhost:3001', 'portal.ppiuk.org'],
+        origin: [
+            'http://localhost:3001',
+            'portal.ppiuk.org',
+            'portal.ppiuk.id',
+        ],
         credentials: true,
         exposedHeaders: ['Content-Disposition'],
-    }
+    };
     // allow CORS
     app.use(cors(corsOptions));
 
