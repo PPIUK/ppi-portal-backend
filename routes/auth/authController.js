@@ -388,7 +388,7 @@ exports.forgotPassword = function (req, res) {
                 });
             }
             let link =
-                'https://' +
+                // 'https://' + // too many htttps
                 process.env.BASE_URI +
                 '/api/auth/reset-password/' +
                 token.token;
