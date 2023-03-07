@@ -1,0 +1,1 @@
+This is a helper directory that contains the schemas for most of the collections contained the Backend Portal Database. All schemas are analyzed using MongoDB Compass and had their sample values array deleted. 
