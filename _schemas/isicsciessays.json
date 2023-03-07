@@ -1,0 +1,521 @@
+{
+    "fields": [
+      {
+        "name": "_id",
+        "path": "_id",
+        "count": 222,
+        "types": [
+          {
+            "name": "ObjectID",
+            "bsonType": "ObjectID",
+            "path": "_id",
+            "count": 222,
+            "total_count": 0,
+            "probability": 1,
+            "unique": 222,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 222,
+        "type": "ObjectID",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "__v",
+        "path": "__v",
+        "count": 222,
+        "types": [
+          {
+            "name": "Int32",
+            "bsonType": "Int32",
+            "path": "__v",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 1,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "Int32",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "abstractSubmitted",
+        "path": "abstractSubmitted",
+        "count": 218,
+        "types": [
+          {
+            "name": "Boolean",
+            "bsonType": "Boolean",
+            "path": "abstractSubmitted",
+            "count": 218,
+            "total_count": 0,
+            "probability": 0.9819819819819819,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "abstractSubmitted",
+            "count": 4,
+            "total_count": 0,
+            "probability": 0.018018018018018018,
+            "unique": 1,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Boolean",
+          "Undefined"
+        ],
+        "has_duplicates": true,
+        "probability": 0.9819819819819819
+      },
+      {
+        "name": "createdAt",
+        "path": "createdAt",
+        "count": 222,
+        "types": [
+          {
+            "name": "Date",
+            "bsonType": "Date",
+            "path": "createdAt",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 222,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 222,
+        "type": "Date",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "emailAddressMain",
+        "path": "emailAddressMain",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "emailAddressMain",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 100,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "ktpPassportNumber1",
+        "path": "ktpPassportNumber1",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "ktpPassportNumber1",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 97,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "ktpPassportNumber2",
+        "path": "ktpPassportNumber2",
+        "count": 76,
+        "types": [
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "ktpPassportNumber2",
+            "count": 146,
+            "total_count": 0,
+            "probability": 0.6576576576576577,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "ktpPassportNumber2",
+            "count": 76,
+            
+            "total_count": 0,
+            "probability": 0.34234234234234234,
+            "unique": 75,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Undefined",
+          "String"
+        ],
+        "has_duplicates": true,
+        "probability": 0.34234234234234234
+      },
+      {
+        "name": "major1",
+        "path": "major1",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "major1",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 87,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "major2",
+        "path": "major2",
+        "count": 76,
+        "types": [
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "major2",
+            "count": 146,
+            "total_count": 0,
+            "probability": 0.6576576576576577,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "major2",
+            "count": 76,
+            
+            "total_count": 0,
+            "probability": 0.34234234234234234,
+            "unique": 61,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Undefined",
+          "String"
+        ],
+        "has_duplicates": true,
+        "probability": 0.34234234234234234
+      },
+      {
+        "name": "name1",
+        "path": "name1",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "name1",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 99,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "name2",
+        "path": "name2",
+        "count": 76,
+        "types": [
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "name2",
+            "count": 146,
+            "total_count": 0,
+            "probability": 0.6576576576576577,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "name2",
+            "count": 76,
+           
+            "total_count": 0,
+            "probability": 0.34234234234234234,
+            "unique": 74,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Undefined",
+          "String"
+        ],
+        "has_duplicates": true,
+        "probability": 0.34234234234234234
+      },
+      {
+        "name": "phoneNumberMain",
+        "path": "phoneNumberMain",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "phoneNumberMain",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 98,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "studentIdNumber1",
+        "path": "studentIdNumber1",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "studentIdNumber1",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 99,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "studentIdNumber2",
+        "path": "studentIdNumber2",
+        "count": 76,
+        "types": [
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "studentIdNumber2",
+            "count": 146,
+            "total_count": 0,
+            "probability": 0.6576576576576577,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "studentIdNumber2",
+            "count": 76,
+            
+            "total_count": 0,
+            "probability": 0.34234234234234234,
+            "unique": 74,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Undefined",
+          "String"
+        ],
+        "has_duplicates": true,
+        "probability": 0.34234234234234234
+      },
+      {
+        "name": "submissionType",
+        "path": "submissionType",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "submissionType",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 2,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "title",
+        "path": "title",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "title",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 99,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "topic",
+        "path": "topic",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "topic",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 8,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "university1",
+        "path": "university1",
+        "count": 222,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "university1",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 81,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "university2",
+        "path": "university2",
+        "count": 76,
+        "types": [
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "university2",
+            "count": 146,
+            "total_count": 0,
+            "probability": 0.6576576576576577,
+            "unique": 1,
+            "has_duplicates": true
+          },
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "university2",
+            "count": 76,
+            
+            "total_count": 0,
+            "probability": 0.34234234234234234,
+            "unique": 52,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 222,
+        "type": [
+          "Undefined",
+          "String"
+        ],
+        "has_duplicates": true,
+        "probability": 0.34234234234234234
+      },
+      {
+        "name": "updatedAt",
+        "path": "updatedAt",
+        "count": 222,
+        "types": [
+          {
+            "name": "Date",
+            "bsonType": "Date",
+            "path": "updatedAt",
+            "count": 222,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 222,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 222,
+        "type": "Date",
+        "has_duplicates": false,
+        "probability": 1
+      }
+    ],
+    "count": 222
+  }

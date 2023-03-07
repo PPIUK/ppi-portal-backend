@@ -1,0 +1,561 @@
+{
+    "fields": [
+      {
+        "name": "_id",
+        "path": "_id",
+        "count": 34,
+        "types": [
+          {
+            "name": "ObjectID",
+            "bsonType": "ObjectID",
+            "path": "_id",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 34,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 34,
+        "type": "ObjectID",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "__v",
+        "path": "__v",
+        "count": 34,
+        "types": [
+          {
+            "name": "Int32",
+            "bsonType": "Int32",
+            "path": "__v",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 1,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 34,
+        "type": "Int32",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "areaOfStudy",
+        "path": "areaOfStudy",
+        "count": 34,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "areaOfStudy",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 2,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 34,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "awardIndicators",
+        "path": "awardIndicators",
+        "count": 34,
+        "types": [
+          {
+            "name": "Array",
+            "bsonType": "Array",
+            "path": "awardIndicators",
+            "count": 34,
+            "types": [
+              {
+                "name": "Document",
+                "bsonType": "Document",
+                "path": "awardIndicators",
+                "count": 43,
+                "fields": [
+                  {
+                    "name": "_id",
+                    "path": "awardIndicators._id",
+                    "count": 43,
+                    "types": [
+                      {
+                        "name": "ObjectID",
+                        "bsonType": "ObjectID",
+                        "path": "awardIndicators._id",
+                        "count": 43,
+                        
+                        "total_count": 0,
+                        "probability": 1,
+                        "unique": 43,
+                        "has_duplicates": false
+                      }
+                    ],
+                    "total_count": 43,
+                    "type": "ObjectID",
+                    "has_duplicates": false,
+                    "probability": 1
+                  },
+                  {
+                    "name": "award",
+                    "path": "awardIndicators.award",
+                    "count": 43,
+                    "types": [
+                      {
+                        "name": "String",
+                        "bsonType": "String",
+                        "path": "awardIndicators.award",
+                        "count": 43,
+                        
+                        "total_count": 0,
+                        "probability": 1,
+                        "unique": 3,
+                        "has_duplicates": true
+                      }
+                    ],
+                    "total_count": 43,
+                    "type": "String",
+                    "has_duplicates": true,
+                    "probability": 1
+                  },
+                  {
+                    "name": "indicators",
+                    "path": "awardIndicators.indicators",
+                    "count": 43,
+                    "types": [
+                      {
+                        "name": "Array",
+                        "bsonType": "Array",
+                        "path": "awardIndicators.indicators",
+                        "count": 43,
+                        "types": [
+                          {
+                            "name": "Document",
+                            "bsonType": "Document",
+                            "path": "awardIndicators.indicators",
+                            "count": 158,
+                            "fields": [
+                              {
+                                "name": "_id",
+                                "path": "awardIndicators.indicators._id",
+                                "count": 158,
+                                "types": [
+                                  {
+                                    "name": "ObjectID",
+                                    "bsonType": "ObjectID",
+                                    "path": "awardIndicators.indicators._id",
+                                    "count": 158,
+                                   
+                                    "total_count": 0,
+                                    "probability": 1,
+                                    "unique": 158,
+                                    "has_duplicates": false
+                                  }
+                                ],
+                                "total_count": 158,
+                                "type": "ObjectID",
+                                "has_duplicates": false,
+                                "probability": 1
+                              },
+                              {
+                                "name": "name",
+                                "path": "awardIndicators.indicators.name",
+                                "count": 131,
+                                "types": [
+                                  {
+                                    "name": "String",
+                                    "bsonType": "String",
+                                    "path": "awardIndicators.indicators.name",
+                                    "count": 131,
+                                    
+                                    "total_count": 0,
+                                    "probability": 0.8291139240506329,
+                                    "unique": 15,
+                                    "has_duplicates": true
+                                  },
+                                  {
+                                    "name": "Undefined",
+                                    "type": "Undefined",
+                                    "path": "awardIndicators.indicators.name",
+                                    "count": 27,
+                                    "total_count": 0,
+                                    "probability": 0.17088607594936708,
+                                    "unique": 1,
+                                    "has_duplicates": true
+                                  }
+                                ],
+                                "total_count": 158,
+                                "type": [
+                                  "String",
+                                  "Undefined"
+                                ],
+                                "has_duplicates": true,
+                                "probability": 0.8291139240506329
+                              },
+                              {
+                                "name": "subindicators",
+                                "path": "awardIndicators.indicators.subindicators",
+                                "count": 158,
+                                "types": [
+                                  {
+                                    "name": "Array",
+                                    "bsonType": "Array",
+                                    "path": "awardIndicators.indicators.subindicators",
+                                    "count": 158,
+                                    "types": [
+                                      {
+                                        "name": "Document",
+                                        "bsonType": "Document",
+                                        "path": "awardIndicators.indicators.subindicators",
+                                        "count": 251,
+                                        "fields": [
+                                          {
+                                            "name": "_id",
+                                            "path": "awardIndicators.indicators.subindicators._id",
+                                            "count": 251,
+                                            "types": [
+                                              {
+                                                "name": "ObjectID",
+                                                "bsonType": "ObjectID",
+                                                "path": "awardIndicators.indicators.subindicators._id",
+                                                "count": 251,
+                                                
+                                                "total_count": 0,
+                                                "probability": 1,
+                                                "unique": 251,
+                                                "has_duplicates": false
+                                              }
+                                            ],
+                                            "total_count": 251,
+                                            "type": "ObjectID",
+                                            "has_duplicates": false,
+                                            "probability": 1
+                                          },
+                                          {
+                                            "name": "elaboration",
+                                            "path": "awardIndicators.indicators.subindicators.elaboration",
+                                            "count": 249,
+                                            "types": [
+                                              {
+                                                "name": "String",
+                                                "bsonType": "String",
+                                                "path": "awardIndicators.indicators.subindicators.elaboration",
+                                                "count": 249,
+                                                
+                                                "total_count": 0,
+                                                "probability": 0.9920318725099602,
+                                                "unique": 87,
+                                                "has_duplicates": true
+                                              },
+                                              {
+                                                "name": "Undefined",
+                                                "type": "Undefined",
+                                                "path": "awardIndicators.indicators.subindicators.elaboration",
+                                                "count": 2,
+                                                "total_count": 0,
+                                                "probability": 0.00796812749003984,
+                                                "unique": 1,
+                                                "has_duplicates": true
+                                              }
+                                            ],
+                                            "total_count": 251,
+                                            "type": [
+                                              "String",
+                                              "Undefined"
+                                            ],
+                                            "has_duplicates": true,
+                                            "probability": 0.9920318725099602
+                                          },
+                                          {
+                                            "name": "name",
+                                            "path": "awardIndicators.indicators.subindicators.name",
+                                            "count": 251,
+                                            "types": [
+                                              {
+                                                "name": "String",
+                                                "bsonType": "String",
+                                                "path": "awardIndicators.indicators.subindicators.name",
+                                                "count": 251,
+                                                
+                                                "total_count": 0,
+                                                "probability": 1,
+                                                "unique": 51,
+                                                "has_duplicates": true
+                                              }
+                                            ],
+                                            "total_count": 251,
+                                            "type": "String",
+                                            "has_duplicates": true,
+                                            "probability": 1
+                                          }
+                                        ],
+                                        "total_count": 0,
+                                        "probability": 1
+                                      }
+                                    ],
+                                    
+                                    "total_count": 251,
+                                    "probability": 1,
+                                    "average_length": 1.5886075949367089
+                                  }
+                                ],
+                                "total_count": 158,
+                                "type": "Array",
+                                "has_duplicates": false,
+                                "probability": 1
+                              }
+                            ],
+                            "total_count": 0,
+                            "probability": 1
+                          }
+                        ],
+                        
+                        "total_count": 158,
+                        "probability": 1,
+                        "average_length": 3.6744186046511627
+                      }
+                    ],
+                    "total_count": 43,
+                    "type": "Array",
+                    "has_duplicates": false,
+                    "probability": 1
+                  }
+                ],
+                "total_count": 0,
+                "probability": 0.5972222222222222
+              },
+              {
+                "name": "Null",
+                "bsonType": "Null",
+                "path": "awardIndicators",
+                "count": 29,
+                "total_count": 0,
+                "probability": 0.4027777777777778,
+                "unique": 1,
+                "has_duplicates": true
+              }
+            ],
+            
+            "total_count": 72,
+            "probability": 1,
+            "average_length": 2.1176470588235294
+          }
+        ],
+        "total_count": 34,
+        "type": "Array",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "awardTypes",
+        "path": "awardTypes",
+        "count": 34,
+        "types": [
+          {
+            "name": "Array",
+            "bsonType": "Array",
+            "path": "awardTypes",
+            "count": 34,
+            "types": [
+              {
+                "name": "String",
+                "bsonType": "String",
+                "path": "awardTypes",
+                "count": 41,
+                
+                "total_count": 0,
+                "probability": 1,
+                "unique": 3,
+                "has_duplicates": true
+              }
+            ],
+            
+            "total_count": 41,
+            "probability": 1,
+            "average_length": 1.2058823529411764
+          }
+        ],
+        "total_count": 34,
+        "type": "Array",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "createdAt",
+        "path": "createdAt",
+        "count": 34,
+        "types": [
+          {
+            "name": "Date",
+            "bsonType": "Date",
+            "path": "createdAt",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 34,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 34,
+        "type": "Date",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "nominatedUser",
+        "path": "nominatedUser",
+        "count": 34,
+        "types": [
+          {
+            "name": "ObjectID",
+            "bsonType": "ObjectID",
+            "path": "nominatedUser",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 34,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 34,
+        "type": "ObjectID",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "statement",
+        "path": "statement",
+        "count": 25,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "statement",
+            "count": 25,
+            
+            "total_count": 0,
+            "probability": 0.7352941176470589,
+            "unique": 25,
+            "has_duplicates": false
+          },
+          {
+            "name": "Undefined",
+            "type": "Undefined",
+            "path": "statement",
+            "count": 9,
+            "total_count": 0,
+            "probability": 0.2647058823529412,
+            "unique": 1,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 34,
+        "type": [
+          "String",
+          "Undefined"
+        ],
+        "has_duplicates": true,
+        "probability": 0.7352941176470589
+      },
+      {
+        "name": "submitted",
+        "path": "submitted",
+        "count": 34,
+        "types": [
+          {
+            "name": "Boolean",
+            "bsonType": "Boolean",
+            "path": "submitted",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 1,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 34,
+        "type": "Boolean",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "submitterType",
+        "path": "submitterType",
+        "count": 34,
+        "types": [
+          {
+            "name": "String",
+            "bsonType": "String",
+            "path": "submitterType",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 2,
+            "has_duplicates": true
+          }
+        ],
+        "total_count": 34,
+        "type": "String",
+        "has_duplicates": true,
+        "probability": 1
+      },
+      {
+        "name": "updatedAt",
+        "path": "updatedAt",
+        "count": 34,
+        "types": [
+          {
+            "name": "Date",
+            "bsonType": "Date",
+            "path": "updatedAt",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 34,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 34,
+        "type": "Date",
+        "has_duplicates": false,
+        "probability": 1
+      },
+      {
+        "name": "user",
+        "path": "user",
+        "count": 34,
+        "types": [
+          {
+            "name": "ObjectID",
+            "bsonType": "ObjectID",
+            "path": "user",
+            "count": 34,
+            
+            "total_count": 0,
+            "probability": 1,
+            "unique": 34,
+            "has_duplicates": false
+          }
+        ],
+        "total_count": 34,
+        "type": "ObjectID",
+        "has_duplicates": false,
+        "probability": 1
+      }
+    ],
+    "count": 34
+  }
